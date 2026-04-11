@@ -110,32 +110,36 @@ export function ScheduleTable() {
         <CardContent>
           <div className="space-y-4">
             {schedules.map((schedule, index) => (
-              <BlurFade key={schedule.id} delay={index * 0.1}>
-                <div className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
-                      {schedule.time.split(":")[0]}
-                    </div>
-                    <div>
-                      <div className="font-medium">{schedule.caseNumber}</div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <User className="h-3 w-3" />
-                        {schedule.partyName}
-                      </div>
-                    </div>
+              <div
+                key={schedule.id}
+                className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                style={{
+                  animationDelay: `${index * 0.05}s`,
+                }}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+                    {schedule.time.split(":")[0]}
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">{schedule.caseNumber}</div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="h-4 w-4" />
-                      {schedule.time}
+                      <User className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{schedule.partyName}</span>
                     </div>
-                    <div className="text-sm font-medium">{schedule.room}</div>
-                    <Badge variant={getStatusBadge(schedule.status).variant}>
-                      {getStatusBadge(schedule.status).label}
-                    </Badge>
                   </div>
                 </div>
-              </BlurFade>
+                <div className="ml-4 flex flex-shrink-0 flex-wrap items-center justify-end gap-2 text-sm">
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                    {schedule.time}
+                  </div>
+                  <div className="font-medium">{schedule.room}</div>
+                  <Badge variant={getStatusBadge(schedule.status).variant}>
+                    {getStatusBadge(schedule.status).label}
+                  </Badge>
+                </div>
+              </div>
             ))}
           </div>
         </CardContent>
