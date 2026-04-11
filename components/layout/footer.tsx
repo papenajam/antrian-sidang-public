@@ -1,6 +1,8 @@
 // components/layout/footer.tsx
 import { Scale, Phone, Mail, MapPin } from "lucide-react"
 
+const CURRENT_YEAR = 2026
+
 export function Footer() {
   return (
     <footer className="border-t bg-muted">
@@ -42,7 +44,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Pengadilan Agama. All rights reserved.
+          © {CURRENT_YEAR} Pengadilan Agama. Hak cipta dilindungi.
         </div>
       </div>
     </footer>
