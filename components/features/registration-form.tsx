@@ -34,6 +34,21 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
+// Mapping step index ke field names yang perlu divalidasi
+const STEP_FIELDS: Record<number, (keyof FormData)[]> = {
+  0: ["namaLengkap", "nik", "nomorHP", "email"],
+  1: ["jenisPerkara", "tanggalSidang"],
+  2: ["agreeTerms"],
+}
+
+const JENIS_PERKARA_LABELS: Record<string, string> = {
+  perceraian: "Perceraian",
+  waris: "Waris",
+  nikah: "Nikah",
+  gugatan: "Gugatan",
+  lainnya: "Lainnya",
+}
+
 const steps = [
   { id: "data-diri", title: "Data Diri" },
   { id: "data-perkara", title: "Data Perkara" },
@@ -76,7 +91,15 @@ export function RegistrationForm() {
     },
   })
 
-  const nextStep = () => {
+  const nextStep = async () => {
+    // Trigger validasi untuk semua field di step saat ini
+    const fieldsToValidate = STEP_FIELDS[currentStep] ?? []
+    const results = await Promise.all(
+      fieldsToValidate.map((field) => form.validateField(field, "change"))
+    )
+    // Jika ada error, jangan advance
+    const hasErrors = results.some((r) => r !== undefined && r !== null)
+    if (hasErrors) return
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1)
     }
@@ -156,47 +179,91 @@ export function RegistrationForm() {
             {currentStep === 0 && (
               <BlurFade>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="namaLengkap">Nama Lengkap *</Label>
-                    <Input
-                      id="namaLengkap"
-                      placeholder="Masukkan nama lengkap"
-                      value={form.getFieldValue("namaLengkap")}
-                      onChange={(e) => form.setFieldValue("namaLengkap", e.target.value)}
-                    />
-                  </div>
+                  <form.Field name="namaLengkap">
+                    {(field) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="namaLengkap">Nama Lengkap *</Label>
+                        <Input
+                          id="namaLengkap"
+                          placeholder="Masukkan nama lengkap"
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          onBlur={field.handleBlur}
+                          aria-invalid={field.state.meta.errors.length > 0}
+                        />
+                        {field.state.meta.errors.length > 0 && (
+                          <p className="text-sm text-destructive">
+                            {field.state.meta.errors[0]?.message ?? String(field.state.meta.errors[0])}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </form.Field>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="nik">NIK *</Label>
-                    <Input
-                      id="nik"
-                      placeholder="16 digit NIK"
-                      maxLength={16}
-                      value={form.getFieldValue("nik")}
-                      onChange={(e) => form.setFieldValue("nik", e.target.value)}
-                    />
-                  </div>
+                  <form.Field name="nik">
+                    {(field) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="nik">NIK *</Label>
+                        <Input
+                          id="nik"
+                          placeholder="16 digit NIK"
+                          maxLength={16}
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value.replace(/\D/g, ""))}
+                          onBlur={field.handleBlur}
+                          aria-invalid={field.state.meta.errors.length > 0}
+                        />
+                        {field.state.meta.errors.length > 0 && (
+                          <p className="text-sm text-destructive">
+                            {field.state.meta.errors[0]?.message ?? String(field.state.meta.errors[0])}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </form.Field>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="nomorHP">Nomor HP *</Label>
-                    <Input
-                      id="nomorHP"
-                      placeholder="08xxxxxxxxxx"
-                      value={form.getFieldValue("nomorHP")}
-                      onChange={(e) => form.setFieldValue("nomorHP", e.target.value)}
-                    />
-                  </div>
+                  <form.Field name="nomorHP">
+                    {(field) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="nomorHP">Nomor HP *</Label>
+                        <Input
+                          id="nomorHP"
+                          placeholder="08xxxxxxxxxx"
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value.replace(/\D/g, ""))}
+                          onBlur={field.handleBlur}
+                          aria-invalid={field.state.meta.errors.length > 0}
+                        />
+                        {field.state.meta.errors.length > 0 && (
+                          <p className="text-sm text-destructive">
+                            {field.state.meta.errors[0]?.message ?? String(field.state.meta.errors[0])}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </form.Field>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email (Opsional)</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="email@example.com"
-                      value={form.getFieldValue("email")}
-                      onChange={(e) => form.setFieldValue("email", e.target.value)}
-                    />
-                  </div>
+                  <form.Field name="email">
+                    {(field) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email (Opsional)</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="email@example.com"
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          onBlur={field.handleBlur}
+                          aria-invalid={field.state.meta.errors.length > 0}
+                        />
+                        {field.state.meta.errors.length > 0 && (
+                          <p className="text-sm text-destructive">
+                            {field.state.meta.errors[0]?.message ?? String(field.state.meta.errors[0])}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </form.Field>
                 </div>
               </BlurFade>
             )}
@@ -205,44 +272,70 @@ export function RegistrationForm() {
             {currentStep === 1 && (
               <BlurFade>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="jenisPerkara">Jenis Perkara *</Label>
-                    <Select
-                      value={form.getFieldValue("jenisPerkara")}
-                      onValueChange={(value) => form.setFieldValue("jenisPerkara", value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih jenis perkara" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="perceraian">Perceraian</SelectItem>
-                        <SelectItem value="waris">Waris</SelectItem>
-                        <SelectItem value="nikah">Nikah</SelectItem>
-                        <SelectItem value="gugatan">Gugatan</SelectItem>
-                        <SelectItem value="lainnya">Lainnya</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <form.Field name="jenisPerkara">
+                    {(field) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="jenisPerkara">Jenis Perkara *</Label>
+                        <Select
+                          value={field.state.value}
+                          onValueChange={(value) => field.handleChange(value)}
+                        >
+                          <SelectTrigger aria-invalid={field.state.meta.errors.length > 0}>
+                            <SelectValue placeholder="Pilih jenis perkara" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="perceraian">Perceraian</SelectItem>
+                            <SelectItem value="waris">Waris</SelectItem>
+                            <SelectItem value="nikah">Nikah</SelectItem>
+                            <SelectItem value="gugatan">Gugatan</SelectItem>
+                            <SelectItem value="lainnya">Lainnya</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {field.state.meta.errors.length > 0 && (
+                          <p className="text-sm text-destructive">
+                            {field.state.meta.errors[0]?.message ?? String(field.state.meta.errors[0])}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </form.Field>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="nomorRegister">Nomor Register (Opsional)</Label>
-                    <Input
-                      id="nomorRegister"
-                      placeholder="Nomor register jika sudah ada"
-                      value={form.getFieldValue("nomorRegister")}
-                      onChange={(e) => form.setFieldValue("nomorRegister", e.target.value)}
-                    />
-                  </div>
+                  <form.Field name="nomorRegister">
+                    {(field) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="nomorRegister">Nomor Register (Opsional)</Label>
+                        <Input
+                          id="nomorRegister"
+                          placeholder="Nomor register jika sudah ada"
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          onBlur={field.handleBlur}
+                        />
+                      </div>
+                    )}
+                  </form.Field>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="tanggalSidang">Tanggal Sidang yang Diinginkan *</Label>
-                    <Input
-                      id="tanggalSidang"
-                      type="date"
-                      value={form.getFieldValue("tanggalSidang")}
-                      onChange={(e) => form.setFieldValue("tanggalSidang", e.target.value)}
-                    />
-                  </div>
+                  <form.Field name="tanggalSidang">
+                    {(field) => (
+                      <div className="space-y-2">
+                        <Label htmlFor="tanggalSidang">Tanggal Sidang yang Diinginkan *</Label>
+                        <Input
+                          id="tanggalSidang"
+                          type="date"
+                          min={new Date().toISOString().split("T")[0]}
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          onBlur={field.handleBlur}
+                          aria-invalid={field.state.meta.errors.length > 0}
+                        />
+                        {field.state.meta.errors.length > 0 && (
+                          <p className="text-sm text-destructive">
+                            {field.state.meta.errors[0]?.message ?? String(field.state.meta.errors[0])}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </form.Field>
                 </div>
               </BlurFade>
             )}
@@ -264,7 +357,9 @@ export function RegistrationForm() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Jenis Perkara:</span>
-                        <span className="font-medium">{form.getFieldValue("jenisPerkara")}</span>
+                        <span className="font-medium">
+                          {JENIS_PERKARA_LABELS[form.getFieldValue("jenisPerkara")] ?? form.getFieldValue("jenisPerkara")}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Tanggal Sidang:</span>
@@ -273,28 +368,37 @@ export function RegistrationForm() {
                     </div>
                   </div>
 
-                  <div className="flex items-start space-x-2">
-                    <Checkbox
-                      id="agreeTerms"
-                      checked={form.getFieldValue("agreeTerms")}
-                      onCheckedChange={(checked) =>
-                        form.setFieldValue("agreeTerms", checked as boolean)
-                      }
-                    />
-                    <div className="grid gap-1.5 leading-none">
-                      <Label
-                        htmlFor="agreeTerms"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        Saya menyetujui syarat dan ketentuan *
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        Dengan mencentang kotak ini, saya menyatakan bahwa data yang
-                        saya masukkan adalah benar dan saya bersedia mengikuti prosedur
-                        yang berlaku.
-                      </p>
-                    </div>
-                  </div>
+                  <form.Field name="agreeTerms">
+                    {(field) => (
+                      <div className="space-y-2">
+                        <div className="flex items-start space-x-2">
+                          <Checkbox
+                            id="agreeTerms"
+                            checked={field.state.value}
+                            onCheckedChange={(checked) => field.handleChange(checked as boolean)}
+                          />
+                          <div className="grid gap-1.5 leading-none">
+                            <Label
+                              htmlFor="agreeTerms"
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              Saya menyetujui syarat dan ketentuan *
+                            </Label>
+                            <p className="text-sm text-muted-foreground">
+                              Dengan mencentang kotak ini, saya menyatakan bahwa data yang
+                              saya masukkan adalah benar dan saya bersedia mengikuti prosedur
+                              yang berlaku.
+                            </p>
+                          </div>
+                        </div>
+                        {field.state.meta.errors.length > 0 && (
+                          <p className="text-sm text-destructive">
+                            {field.state.meta.errors[0]?.message ?? String(field.state.meta.errors[0])}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </form.Field>
                 </div>
               </BlurFade>
             )}
