@@ -1,6 +1,28 @@
 import { ShimmerButton } from "@/components/magic/shimmer-button"
-import { ArrowRight, Calendar, Users } from "lucide-react"
+import { ArrowRight, Calendar, Users, TrendingUp } from "lucide-react"
 import Link from "next/link"
+
+// TODO: Ganti dengan data real dari API saat sudah tersedia
+const STATS_PLACEHOLDER = [
+  {
+    icon: Users,
+    value: null,
+    label: "Antrian Terdaftar",
+    placeholder: "—",
+  },
+  {
+    icon: Calendar,
+    value: null,
+    label: "Sidang Hari Ini",
+    placeholder: "—",
+  },
+  {
+    icon: TrendingUp,
+    value: null,
+    label: "Tingkat Kehadiran",
+    placeholder: "—",
+  },
+]
 
 export function HeroSection() {
   return (
@@ -32,30 +54,28 @@ export function HeroSection() {
           </div>
         </div>
 
-        {/* Statistik */}
+        {/* Statistik — menampilkan placeholder sampai API tersedia */}
         <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="rounded-lg bg-white/10 p-6 text-center backdrop-blur">
-            <Users className="mx-auto mb-4 h-8 w-8 text-secondary" />
-            <div className="text-3xl font-bold">1,234</div>
-            <div className="text-white/70">Antrian Terdaftar</div>
-          </div>
-          <div className="rounded-lg bg-white/10 p-6 text-center backdrop-blur">
-            <Calendar className="mx-auto mb-4 h-8 w-8 text-secondary" />
-            <div className="text-3xl font-bold">12</div>
-            <div className="text-white/70">Sidang Hari Ini</div>
-          </div>
-          <div className="rounded-lg bg-white/10 p-6 text-center backdrop-blur sm:col-span-2 lg:col-span-1">
-            <div className="mx-auto mb-4 flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-lg font-bold text-black">
-              ✓
-            </div>
-            <div className="text-3xl font-bold">98%</div>
-            <div className="text-white/70">Kepuasan Pengguna</div>
-          </div>
+          {STATS_PLACEHOLDER.map((stat, index) => {
+            const Icon = stat.icon
+            return (
+              <div
+                key={index}
+                className="rounded-lg bg-white/10 p-6 text-center backdrop-blur sm:last:col-span-1"
+              >
+                <Icon className="mx-auto mb-4 h-8 w-8 text-secondary" />
+                <div className="text-3xl font-bold">
+                  {stat.value ?? stat.placeholder}
+                </div>
+                <div className="text-white/70">{stat.label}</div>
+              </div>
+            )
+          })}
         </div>
       </div>
 
       {/* Dekorasi background */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
         <div className="absolute -left-40 -top-40 h-80 w-80 rounded-full bg-white/5" />
         <div className="absolute -bottom-40 -right-40 h-80 w-80 rounded-full bg-white/5" />
       </div>
