@@ -4,6 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { Scale, Menu, X, Sun, Moon } from "lucide-react"
 import { useTheme } from "next-themes"
+import { useAppSettings } from "@/contexts/app-settings-context"
 
 const NAV_LINKS = [
   { href: "/", label: "Beranda" },
@@ -14,6 +15,9 @@ const NAV_LINKS = [
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const { theme, setTheme } = useTheme()
+  const { settings } = useAppSettings()
+
+  const institutionName = settings?.institution.name ?? "Pengadilan Negeri"
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-primary text-primary-foreground">
@@ -21,7 +25,7 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Scale className="h-6 w-6" />
-          <span className="font-bold text-lg">Pengadilan Agama</span>
+          <span className="font-bold text-lg">{institutionName}</span>
         </Link>
 
         {/* Desktop nav + theme toggle */}

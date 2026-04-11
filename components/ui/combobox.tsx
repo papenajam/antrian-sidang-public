@@ -22,11 +22,20 @@ function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
 function ComboboxTrigger({
   className,
   children,
+  disabled: disabledProp,
   ...props
 }: ComboboxPrimitive.Trigger.Props) {
+  const [isHydrated, setIsHydrated] = React.useState(false)
+  const disabled = isHydrated ? (disabledProp === true ? true : false) : false
+
+  React.useEffect(() => {
+    setIsHydrated(true)
+  }, [])
+
   return (
     <ComboboxPrimitive.Trigger
       data-slot="combobox-trigger"
+      disabled={disabled}
       className={cn("[&_svg:not([class*='size-'])]:size-4", className)}
       {...props}
     >

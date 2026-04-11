@@ -1,9 +1,19 @@
 // components/layout/footer.tsx
-import { Scale, Phone, Mail, MapPin } from "lucide-react"
+"use client"
 
-const CURRENT_YEAR = 2026
+import { Scale, Phone, Mail, MapPin } from "lucide-react"
+import { useAppSettings } from "@/contexts/app-settings-context"
+
+const CURRENT_YEAR = new Date().getFullYear()
 
 export function Footer() {
+  const { settings } = useAppSettings()
+
+  const institutionName = settings?.institution.name ?? "Pengadilan Negeri"
+  const institutionAddress = settings?.institution.address ?? "Jl. Pengadilan No. 1, Jakarta"
+  const institutionPhone = settings?.institution.phone ?? "(021) 1234567"
+  const institutionEmail = settings?.institution.email ?? "info@pengadilan-agama.go.id"
+
   return (
     <footer className="border-t bg-muted">
       <div className="container mx-auto py-8">
@@ -11,7 +21,7 @@ export function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Scale className="h-5 w-5 text-primary" />
-              <span className="font-bold">Pengadilan Agama</span>
+              <span className="font-bold">{institutionName}</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Melayani masyarakat dengan profesional, transparan, dan akuntabel.
@@ -22,15 +32,15 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4" />
-                (021) 1234567
+                {institutionPhone}
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                info@pengadilan-agama.go.id
+                {institutionEmail}
               </li>
               <li className="flex items-center gap-2">
                 <MapPin className="h-4 w-4" />
-                Jl. Pengadilan No. 1, Jakarta
+                {institutionAddress}
               </li>
             </ul>
           </div>
@@ -44,7 +54,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-8 pt-8 border-t text-center text-sm text-muted-foreground">
-          © {CURRENT_YEAR} Pengadilan Agama. Hak cipta dilindungi.
+          © {CURRENT_YEAR} {institutionName}. Hak cipta dilindungi.
         </div>
       </div>
     </footer>

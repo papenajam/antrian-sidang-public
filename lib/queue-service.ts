@@ -11,6 +11,7 @@ import type {
   QueueStatusResponse,
   QueueStatistics,
   QueueTicket,
+  AppSettings,
 } from '@/lib/api-types';
 
 /**
@@ -18,6 +19,13 @@ import type {
  */
 export async function getTodaySchedule(): Promise<ScheduleResponse> {
   return api.get<ScheduleResponse>('/public/queue/schedule');
+}
+
+/**
+ * Fetch aplikasi settings (identity, institution, dll)
+ */
+export async function getAppSettings(): Promise<{ data: AppSettings }> {
+  return api.get<{ data: AppSettings }>('/public/queue/settings');
 }
 
 /**

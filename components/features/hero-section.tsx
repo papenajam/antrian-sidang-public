@@ -1,6 +1,9 @@
+"use client"
+
 import { ShimmerButton } from "@/components/magic/shimmer-button"
 import { ArrowRight, Calendar, Users, TrendingUp } from "lucide-react"
 import Link from "next/link"
+import { useAppSettings } from "@/contexts/app-settings-context"
 
 // Stats akan ditampilkan setelah API tersedia
 // TODO: Buat server action untuk fetch statistik dari backend
@@ -26,17 +29,22 @@ const STATS_PLACEHOLDER = [
 ]
 
 export function HeroSection() {
+  const { settings } = useAppSettings()
+
+  const appName = settings?.app.name ?? "Antrian Sidang"
+  const institutionName = settings?.institution.name ?? "Pengadilan Negeri"
+  const appDescription = settings?.app.description ?? "Sistem antrian sidang yang modern dan interaktif"
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-primary to-primary/80 py-20 text-white">
       <div className="container mx-auto relative z-10">
         <div className="mx-auto max-w-3xl text-center">
           <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Sistem Antrian Sidang{" "}
-            <span className="text-secondary">Pengadilan Agama</span>
+            Sistem {appName}{" "}
+            <span className="text-secondary">{institutionName}</span>
           </h1>
           <p className="mb-8 text-lg text-white/80 sm:text-xl">
-            Daftar antrian sidang dengan mudah dan pantau jadwal sidang Anda secara
-            real-time. Sistem yang modern, cepat, dan andal.
+            {appDescription}
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link href="#daftar">

@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header"
 import { Footer } from "@/components/layout/footer"
 import { Toaster } from "@/components/ui/sonner"
 import { ThemeProvider } from "next-themes"
+import { AppSettingsProvider } from "@/contexts/app-settings-context"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
@@ -22,12 +23,14 @@ export default function RootLayout({
     <html lang="id" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-          <div className="relative flex min-h-screen flex-col">
-            <Header />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
-          <Toaster />
+          <AppSettingsProvider>
+            <div className="relative flex min-h-screen flex-col">
+              <Header />
+              <main className="flex-1">{children}</main>
+              <Footer />
+            </div>
+            <Toaster />
+          </AppSettingsProvider>
         </ThemeProvider>
       </body>
     </html>

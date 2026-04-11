@@ -11,7 +11,7 @@ export interface QueueTicket {
   ruang_sidang: string | null;
 }
 
-export type QueueStatus = 
+export type QueueStatus =
   | 'waiting'
   | 'in_service'
   | 'completed'
@@ -29,10 +29,31 @@ export interface JadwalSidang {
   agenda: string;
 }
 
+// App Settings types
+export interface AppSettings {
+  app: {
+    name: string;
+    short_name: string;
+    description: string;
+  };
+  institution: {
+    name: string;
+    short_name: string;
+    address: string | null;
+    phone: string | null;
+    email: string | null;
+    logo: string | null;
+  };
+}
+
 // API Response types
 export interface ScheduleResponse {
   data: JadwalSidang[];
   error: string | null;
+}
+
+export interface SettingsResponse {
+  data: AppSettings;
 }
 
 export interface QueueBookRequest {

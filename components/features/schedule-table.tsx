@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { BlurFade } from "@/components/magic/blur-fade"
-import { Calendar, Clock, User } from "lucide-react"
+import { Calendar, Clock, User, Inbox } from "lucide-react"
 import { getTodaySchedule } from "@/lib/queue-service"
 import type { JadwalSidang } from "@/lib/api-types"
 import { toast } from "sonner"
@@ -102,45 +102,87 @@ export function ScheduleTable() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {schedules.map((schedule, index) => (
-              <div
-                key={schedule.id}
-                className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
-                style={{
-                  animationDelay: `${index * 0.05}s`,
+          {schedules.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed py-12 text-center">
+              <Inbox className="mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 font-medium">Tidak ada jadwal sidang hari ini</h3>
+              <p className="text-sm text-muted-foreground">
+                Belum ada jadwal sidang yang terdaftar untuk hari ini. Data akan diperbarui secara otomatis.
+              </p>
+              <button
+                onClick={async () => {
+                  setIsLoading(true);
+                  try {
+                    const response = await getTodaySchedule();
+                    if (!response.error) {
+                      const transformed: Schedule[] = response.data.map(
+                        (jadwal: JadwalSidang) => ({
+                          id: jadwal.perkara_id.toString(),
+                          perkaraId: jadwal.perkara_id,
+                          caseNumber: jadwal.nomor_perkara,
+                          partyName: jadwal.pihak_nama,
+                          time: jadwal.waktu,
+                          room: jadwal.ruangan,
+                          agenda: jadwal.agenda,
+                          status: "scheduled" as const,
+                        })
+                      );
+                      setSchedules(transformed);
+                    }
+                  } catch (error) {
+                    toast.error("Gagal memuat jadwal sidang");
+                    console.error("Error refreshing schedule:", error);
+                  } finally {
+                    setIsLoading(false);
+                  }
                 }}
+                className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
-                    {schedule.time.split(":")[0]}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="truncate font-medium">{schedule.caseNumber}</div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <User className="h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{schedule.partyName}</span>
+                <Calendar className="h-4 w-4" />
+                Muat Ulang Jadwal
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {schedules.map((schedule, index) => (
+                <div
+                  key={schedule.id}
+                  className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                  style={{
+                    animationDelay: `${index * 0.05}s`,
+                  }}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+                      {schedule.time.split(":")[0]}
                     </div>
-                    {schedule.agenda && (
-                      <div className="mt-1 text-xs text-muted-foreground truncate">
-                        Agenda: {schedule.agenda}
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{schedule.caseNumber}</div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <User className="h-3 w-3 flex-shrink-0" />
+                        <span className="truncate">{schedule.partyName}</span>
                       </div>
-                    )}
+                      {schedule.agenda && (
+                        <div className="mt-1 text-xs text-muted-foreground truncate">
+                          Agenda: {schedule.agenda}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="ml-4 flex flex-shrink-0 flex-wrap items-center justify-end gap-2 text-sm">
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Clock className="h-4 w-4" />
+                      {schedule.time}
+                    </div>
+                    <div className="font-medium">{schedule.room}</div>
+                    <Badge variant={getStatusBadge(schedule.status).variant}>
+                      {getStatusBadge(schedule.status).label}
+                    </Badge>
                   </div>
                 </div>
-                <div className="ml-4 flex flex-shrink-0 flex-wrap items-center justify-end gap-2 text-sm">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    {schedule.time}
-                  </div>
-                  <div className="font-medium">{schedule.room}</div>
-                  <Badge variant={getStatusBadge(schedule.status).variant}>
-                    {getStatusBadge(schedule.status).label}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </BlurFade>
