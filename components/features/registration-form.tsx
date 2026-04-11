@@ -122,10 +122,10 @@ export function RegistrationForm() {
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 200, damping: 20 }}
             >
-              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-green-100">
-                <CheckCircle className="h-12 w-12 text-green-600" />
+              <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
+                <CheckCircle className="h-12 w-12 text-primary" />
               </div>
-              <h2 className="mb-2 text-2xl font-bold text-green-600">
+              <h2 className="mb-2 text-2xl font-bold text-primary">
                 Pendaftaran Berhasil!
               </h2>
               <p className="mb-6 text-muted-foreground">

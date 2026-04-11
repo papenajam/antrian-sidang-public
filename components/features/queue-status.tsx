@@ -73,10 +73,8 @@ export function QueueStatus() {
               <NumberTicker value={data?.currentNumber || 0} duration={1.5} />
             </div>
             <div className="mt-2 flex items-center justify-center gap-2 text-sm">
-              <motion.div
-                className="h-3 w-3 rounded-full bg-green-400"
-                animate={{ scale: [1, 1.2, 1] }}
-                transition={{ repeat: Infinity, duration: 1.5 }}
+              <div
+                className="h-3 w-3 rounded-full bg-green-400 motion-safe:animate-pulse"
               />
               Sedang Dipanggil
             </div>
