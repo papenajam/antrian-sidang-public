@@ -6,7 +6,7 @@ const CURRENT_YEAR = 2026
 export function Footer() {
   return (
     <footer className="border-t bg-muted">
-      <div className="container py-8">
+      <div className="container mx-auto py-8">
         <div className="grid gap-8 md:grid-cols-3">
           <div>
             <div className="flex items-center gap-2 mb-4">

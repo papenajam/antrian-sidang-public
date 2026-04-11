@@ -27,7 +27,7 @@ const STATS_PLACEHOLDER = [
 export function HeroSection() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-primary to-primary/80 py-20 text-white">
-      <div className="container relative z-10">
+      <div className="container mx-auto relative z-10">
         <div className="mx-auto max-w-3xl text-center">
           <h1 className="mb-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
             Sistem Antrian Sidang{" "}

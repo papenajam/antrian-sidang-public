@@ -7,7 +7,7 @@ export default function Home() {
   return (
     <div className="flex flex-col">
       <HeroSection />
-      <div className="container py-12">
+      <div className="container mx-auto py-12">
         <div className="grid gap-8 lg:grid-cols-2">
           <QueueStatus />
           <ScheduleTable />
