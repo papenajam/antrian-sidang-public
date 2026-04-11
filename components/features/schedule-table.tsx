@@ -6,13 +6,18 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { Calendar, Clock, User } from "lucide-react"
+import { getTodaySchedule } from "@/lib/queue-service"
+import type { JadwalSidang } from "@/lib/api-types"
+import { toast } from "sonner"
 
 interface Schedule {
   id: string
+  perkaraId: number
   caseNumber: string
   partyName: string
   time: string
   room: string
+  agenda: string
   status: "scheduled" | "in_progress" | "completed" | "postponed"
 }
 
@@ -21,54 +26,43 @@ export function ScheduleTable() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Simulasi API call — akan diganti dengan API sungguhan nanti
-    const timer = setTimeout(() => {
-      setSchedules([
-        {
-          id: "1",
-          caseNumber: "001/Pdt.G/2026/PA.Jkt",
-          partyName: "Ahmad Susanto vs. Siti Aminah",
-          time: "09:00",
-          room: "Ruang 1",
-          status: "in_progress",
-        },
-        {
-          id: "2",
-          caseNumber: "002/Pdt.G/2026/PA.Jkt",
-          partyName: "Budi Santoso vs. Dewi Lestari",
-          time: "10:00",
-          room: "Ruang 2",
-          status: "scheduled",
-        },
-        {
-          id: "3",
-          caseNumber: "003/Pdt.G/2026/PA.Jkt",
-          partyName: "Candra Wijaya vs. Rina Marlina",
-          time: "11:00",
-          room: "Ruang 1",
-          status: "scheduled",
-        },
-        {
-          id: "4",
-          caseNumber: "004/Pdt.G/2026/PA.Jkt",
-          partyName: "Dian Purnama vs. Eko Prasetyo",
-          time: "13:00",
-          room: "Ruang 3",
-          status: "postponed",
-        },
-        {
-          id: "5",
-          caseNumber: "005/Pdt.G/2026/PA.Jkt",
-          partyName: "Fajar Nugroho vs. Gita Permani",
-          time: "14:00",
-          room: "Ruang 2",
-          status: "scheduled",
-        },
-      ])
-      setIsLoading(false)
-    }, 1500)
+    async function fetchData() {
+      try {
+        const response = await getTodaySchedule()
+        
+        if (response.error) {
+          toast.error(response.error)
+          setSchedules([])
+        } else {
+          // Transform API response ke format component
+          const transformed: Schedule[] = response.data.map(
+            (jadwal: JadwalSidang) => ({
+              id: jadwal.perkara_id.toString(),
+              perkaraId: jadwal.perkara_id,
+              caseNumber: jadwal.nomor_perkara,
+              partyName: jadwal.pihak_nama,
+              time: jadwal.waktu,
+              room: jadwal.ruangan,
+              agenda: jadwal.agenda,
+              status: "scheduled" as const,
+            })
+          )
+          setSchedules(transformed)
+        }
+      } catch (error) {
+        toast.error("Gagal memuat jadwal sidang")
+        console.error("Error fetching schedule:", error)
+        setSchedules([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-    return () => clearTimeout(timer)
+    fetchData()
+    
+    // Refresh data setiap 60 detik
+    const interval = setInterval(fetchData, 60000)
+    return () => clearInterval(interval)
   }, [])
 
   const getStatusBadge = (status: Schedule["status"]) => {
@@ -127,6 +121,11 @@ export function ScheduleTable() {
                       <User className="h-3 w-3 flex-shrink-0" />
                       <span className="truncate">{schedule.partyName}</span>
                     </div>
+                    {schedule.agenda && (
+                      <div className="mt-1 text-xs text-muted-foreground truncate">
+                        Agenda: {schedule.agenda}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="ml-4 flex flex-shrink-0 flex-wrap items-center justify-end gap-2 text-sm">

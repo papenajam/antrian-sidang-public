@@ -7,6 +7,8 @@ import { BlurFade } from "@/components/magic/blur-fade"
 import { NumberTicker } from "@/components/magic/number-ticker"
 import { motion } from "framer-motion"
 import { Users, Clock, CheckCircle } from "lucide-react"
+import { getTodaySchedule, calculateQueueStatistics } from "@/lib/queue-service"
+import { toast } from "sonner"
 
 interface QueueData {
   currentNumber: number
@@ -20,18 +22,43 @@ export function QueueStatus() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    // Simulasi API call — akan diganti dengan API sungguhan nanti
-    const timer = setTimeout(() => {
-      setData({
-        currentNumber: 42,
-        waitingCount: 8,
-        processedToday: 156,
-        lastUpdated: new Date().toLocaleTimeString("id-ID"),
-      })
-      setIsLoading(false)
-    }, 2000)
+    async function fetchData() {
+      try {
+        // Fetch jadwal hari ini
+        const scheduleResponse = await getTodaySchedule()
+        
+        if (scheduleResponse.error) {
+          toast.error(scheduleResponse.error)
+          return
+        }
 
-    return () => clearTimeout(timer)
+        // Hitung statistik dari data jadwal
+        // Karena API tidak mengembalikan data tiket secara langsung,
+        // kita gunakan data jadwal sebagai acuan
+        const statistics = calculateQueueStatistics(
+          scheduleResponse.data,
+          [] // TODO: Perlu endpoint untuk fetch semua tiket hari ini
+        )
+
+        setData({
+          currentNumber: statistics.currentNumber,
+          waitingCount: statistics.waitingCount,
+          processedToday: statistics.processedToday,
+          lastUpdated: statistics.lastUpdated,
+        })
+      } catch (error) {
+        toast.error("Gagal memuat status antrian")
+        console.error("Error fetching queue status:", error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+    
+    // Refresh data setiap 30 detik
+    const interval = setInterval(fetchData, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   if (isLoading) {

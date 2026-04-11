@@ -2,7 +2,8 @@ import { ShimmerButton } from "@/components/magic/shimmer-button"
 import { ArrowRight, Calendar, Users, TrendingUp } from "lucide-react"
 import Link from "next/link"
 
-// TODO: Ganti dengan data real dari API saat sudah tersedia
+// Stats akan ditampilkan setelah API tersedia
+// TODO: Buat server action untuk fetch statistik dari backend
 const STATS_PLACEHOLDER = [
   {
     icon: Users,

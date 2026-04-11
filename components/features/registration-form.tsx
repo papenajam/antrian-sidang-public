@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "@tanstack/react-form"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -8,36 +8,74 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Combobox, ComboboxContent, ComboboxEmpty, ComboboxInput, ComboboxItem, ComboboxList } from "@/components/ui/combobox"
 import { ShimmerButton } from "@/components/magic/shimmer-button"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { motion } from "framer-motion"
 import { CheckCircle, Loader2 } from "lucide-react"
+import { bookQueue, getTodaySchedule } from "@/lib/queue-service"
+import type { JadwalSidang } from "@/lib/api-types"
+import { ApiError } from "@/lib/api"
 
 const formSchema = z.object({
-  jadwalSidang: z.string().min(1, { message: "Pilih jadwal sidang" }),
+  perkaraId: z.number().min(1, { message: "Pilih jadwal sidang" }),
   namaPihak: z.string().min(3, { message: "Nama minimal 3 karakter" }).max(255),
   nomorTelepon: z.string().max(30),
 })
 
 type FormData = z.infer<typeof formSchema>
 
-// Dummy jadwal sidang untuk demo
-const JADWAL_SIDANG = [
-  { id: "1", nomorPerkara: "123/Pdt.G/2024/PA.Pps", pihakNama: "Ahmad vs Siti", ruangan: "Ruang Sidang 1", waktu: "09:00 WITA" },
-  { id: "2", nomorPerkara: "456/Pdt.P/2024/PA.Pps", pihakNama: "Budi vs Dewi", ruangan: "Ruang Sidang 2", waktu: "10:00 WITA" },
-  { id: "3", nomorPerkara: "789/Pdt.G/2024/PA.Pps", pihakNama: "Eko vs Rina", ruangan: "Ruang Sidang 1", waktu: "11:00 WITA" },
-  { id: "4", nomorPerkara: "321/Pdt.W/2024/PA.Pps", pihakNama: "Warisan Hartono", ruangan: "Ruang Sidang 3", waktu: "13:00 WITA" },
-]
+interface JadwalOption {
+  perkaraId: number
+  label: string
+}
 
 export function RegistrationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
-  const [ticketData, setTicketData] = useState<{ nomorAntrian: string; ruangan: string } | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [jadwalOptions, setJadwalOptions] = useState<JadwalOption[]>([])
+  const [ticketData, setTicketData] = useState<{ 
+    nomorAntrian: string
+    ruangan: string
+    pihakNama: string
+    nomorPerkara: string
+  } | null>(null)
+
+  // Fetch jadwal sidang saat component mount
+  useEffect(() => {
+    async function fetchJadwal() {
+      try {
+        const response = await getTodaySchedule()
+        
+        if (response.error) {
+          toast.error(response.error)
+          setJadwalOptions([])
+        } else {
+          // Transform API response ke dropdown options
+          const options: JadwalOption[] = response.data.map(
+            (jadwal: JadwalSidang) => ({
+              perkaraId: jadwal.perkara_id,
+              label: `${jadwal.nomor_perkara} - ${jadwal.pihak_nama} (${jadwal.ruangan}, ${jadwal.waktu})`,
+            })
+          )
+          setJadwalOptions(options)
+        }
+      } catch (error) {
+        toast.error("Gagal memuat jadwal sidang")
+        console.error("Error fetching jadwal:", error)
+        setJadwalOptions([])
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchJadwal()
+  }, [])
 
   const form = useForm({
     defaultValues: {
-      jadwalSidang: "",
+      perkaraId: 0,
       namaPihak: "",
       nomorTelepon: "",
     },
@@ -46,25 +84,38 @@ export function RegistrationForm() {
     },
     onSubmit: async ({ value }) => {
       setIsSubmitting(true)
-      
-      // Simulasi API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      
-      // Generate nomor antrian dummy (format: S-001, S-002, dst)
-      const nomorAntrian = `S-${String(Math.floor(Math.random() * 999) + 1).padStart(3, "0")}`
-      const jadwal = JADWAL_SIDANG.find(j => j.id === value.jadwalSidang)
-      
-      setTicketData({
-        nomorAntrian,
-        ruangan: jadwal?.ruangan || "Ruang Sidang 1",
-      })
-      
-      setIsSubmitting(false)
-      setIsSuccess(true)
-      
-      toast.success("Pendaftaran Berhasil!", {
-        description: `Nomor antrian Anda: ${nomorAntrian}`,
-      })
+
+      try {
+        // Submit ke backend API
+        const response = await bookQueue({
+          perkara_id: value.perkaraId,
+          pihak_nama: value.namaPihak,
+          pihak_telepon: value.nomorTelepon || undefined,
+        })
+
+        setTicketData({
+          nomorAntrian: response.data.queue_number,
+          ruangan: response.data.ruang_sidang || "Ruang Sidang",
+          pihakNama: response.data.pihak_nama,
+          nomorPerkara: response.data.nomor_perkara,
+        })
+
+        setIsSubmitting(false)
+        setIsSuccess(true)
+
+        toast.success("Pendaftaran Berhasil!", {
+          description: `Nomor antrian Anda: ${response.data.queue_number}`,
+        })
+      } catch (error) {
+        setIsSubmitting(false)
+        
+        if (error instanceof ApiError) {
+          toast.error(error.message)
+        } else {
+          toast.error("Terjadi kesalahan saat mendaftarkan antrian")
+        }
+        console.error("Error submitting registration:", error)
+      }
     },
   })
 
@@ -100,6 +151,18 @@ export function RegistrationForm() {
                   <div className="text-sm text-muted-foreground">Ruangan Sidang</div>
                   <div className="text-lg font-semibold">
                     {ticketData.ruangan}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Perkara</div>
+                  <div className="text-sm font-medium">
+                    {ticketData.nomorPerkara}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-muted-foreground">Pihak</div>
+                  <div className="text-sm font-medium">
+                    {ticketData.pihakNama}
                   </div>
                 </div>
               </div>
@@ -138,28 +201,50 @@ export function RegistrationForm() {
             className="space-y-6"
           >
             {/* Jadwal Sidang */}
-            <form.Field name="jadwalSidang">
+            <form.Field name="perkaraId">
               {(field) => (
                 <div className="space-y-2">
-                  <Label htmlFor="jadwalSidang">Pilih Jadwal Sidang *</Label>
-                  <Select
-                    value={field.state.value}
-                    onValueChange={(value) => field.handleChange(value)}
+                  <Label htmlFor="perkaraId">Pilih Jadwal Sidang *</Label>
+                  <Combobox
+                    items={jadwalOptions}
+                    value={
+                      field.state.value > 0
+                        ? jadwalOptions.find((j) => j.perkaraId === field.state.value) ?? null
+                        : null
+                    }
+                    onValueChange={(selected) => {
+                      field.handleChange(selected?.perkaraId ?? 0)
+                    }}
+                    itemToStringValue={(item) => item?.label ?? ""}
                   >
-                    <SelectTrigger aria-invalid={field.state.meta.errors.length > 0}>
-                      <SelectValue placeholder="Pilih jadwal sidang" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {JADWAL_SIDANG.map((jadwal) => (
-                        <SelectItem key={jadwal.id} value={jadwal.id}>
-                          {jadwal.nomorPerkara} - {jadwal.pihakNama} ({jadwal.ruangan}, {jadwal.waktu})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <ComboboxInput
+                      placeholder={
+                        isLoading
+                          ? "Memuat jadwal..."
+                          : jadwalOptions.length === 0
+                            ? "Tidak ada jadwal tersedia"
+                            : "Cari jadwal sidang..."
+                      }
+                      disabled={isLoading}
+                    />
+                    <ComboboxContent>
+                      <ComboboxEmpty>
+                        {jadwalOptions.length === 0
+                          ? "Tidak ada jadwal sidang tersedia hari ini"
+                          : "Tidak ada jadwal ditemukan"}
+                      </ComboboxEmpty>
+                      <ComboboxList>
+                        {(jadwal) => (
+                          <ComboboxItem key={jadwal.perkaraId} value={jadwal}>
+                            {jadwal.label}
+                          </ComboboxItem>
+                        )}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
                   {field.state.meta.errors.length > 0 && (
-                    <p className="text-sm text-destructive">
-                      {String(field.state.meta.errors[0])}
+                    <p className="text-sm text-destructive" role="alert">
+                      {field.state.meta.errors.map((e) => (e as any).message ?? String(e)).join(", ")}
                     </p>
                   )}
                 </div>
@@ -180,8 +265,8 @@ export function RegistrationForm() {
                     aria-invalid={field.state.meta.errors.length > 0}
                   />
                   {field.state.meta.errors.length > 0 && (
-                    <p className="text-sm text-destructive">
-                      {String(field.state.meta.errors[0])}
+                    <p className="text-sm text-destructive" role="alert">
+                      {field.state.meta.errors.map((e) => (e as any).message ?? String(e)).join(", ")}
                     </p>
                   )}
                 </div>
@@ -202,8 +287,8 @@ export function RegistrationForm() {
                     aria-invalid={field.state.meta.errors.length > 0}
                   />
                   {field.state.meta.errors.length > 0 && (
-                    <p className="text-sm text-destructive">
-                      {String(field.state.meta.errors[0])}
+                    <p className="text-sm text-destructive" role="alert">
+                      {field.state.meta.errors.map((e) => (e as any).message ?? String(e)).join(", ")}
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground">
@@ -214,15 +299,37 @@ export function RegistrationForm() {
             </form.Field>
 
             {/* Submit Button */}
-            <div className="pt-4">
-              <ShimmerButton type="submit" disabled={isSubmitting} className="w-full">
+            <div className="pt-6">
+              <ShimmerButton
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full text-base font-semibold py-4 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                shimmerColor="#ffffff"
+                shimmerOpacity={0.3}
+                shimmerDuration="2.5s"
+              >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                     Memproses...
                   </>
                 ) : (
-                  "Ambil Antrian"
+                  <>
+                    Ambil Antrian
+                    <svg
+                      className="ml-2 h-5 w-5 transition-transform duration-300 group-hover/button:translate-x-1"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M13 7l5 5m0 0l-5 5m5-5H6"
+                      />
+                    </svg>
+                  </>
                 )}
               </ShimmerButton>
             </div>
