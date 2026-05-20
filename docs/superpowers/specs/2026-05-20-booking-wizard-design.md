@@ -53,11 +53,19 @@ Mengubah workflow booking antrian sidang dari single-form menjadi step-by-step w
 - Tampilkan tiket (nomor antrian, jam, ruangan, perkara, pihak)
 - Tersedia fitur cek status antrian real-time
 
+### 2.8 Ganti Jadwal (Reschedule)
+- Jika pihak sudah punya booking, bisa mengganti slot waktu
+- **Nomor antrian tetap sama** — hanya slot waktu yang berubah
+- Workflow: Status Booking → Pilih "Ganti Jadwal" → Pilih slot baru → Konfirmasi → Slot diperbarui
+- Slot lama dilepas (kuota +1), slot baru diambil (kuota -1)
+- Hanya bisa ganti jika status booking masih "waiting"
+- Konfirmasi wajib sebelum ganti: "Batalkan booking [slot lama] dan pindah ke [slot baru]?"
+
 ---
 
 ## 3. Arsitektur
 
-### 3.1 Flow Diagram
+### 3.1 Flow Diagram — Booking Baru
 
 ```
 User Input (Nomor Perkara + NIK)
@@ -67,7 +75,9 @@ POST /api/public/queue/validate
         │
         ├── valid: false → Tampilkan pesan error → STOP
         │
-        ▼ (valid: true)
+        ├── valid: true + existing_queue → Tampilkan status + opsi "Ganti Jadwal"
+        │
+        ▼ (valid: true + no existing_queue)
 GET /api/public/queue/slots?perkara_id=X&date=Y
         │
         ▼
@@ -78,6 +88,30 @@ POST /api/public/queue/book
         │
         ▼
 Tampilkan tiket + opsi cek status
+```
+
+### 3.2 Flow Diagram — Ganti Jadwal (Reschedule)
+
+```
+User sudah punya booking (status: waiting)
+        │
+        ▼
+User klik "Ganti Jadwal" di halaman status
+        │
+        ▼
+GET /api/public/queue/slots?perkara_id=X&date=Y
+        │
+        ▼
+Tampilkan slot cards (slot lama tetap terlihat)
+        │
+        ▼ (user pilih slot baru)
+Konfirmasi: "Batalkan booking [slot lama] dan pindah ke [slot baru]?"
+        │
+        ▼
+PUT /api/public/queue/reschedule
+        │
+        ▼
+Slot diperbarui, nomor antrian tetap
 ```
 
 ### 3.2 API Endpoints
@@ -188,6 +222,39 @@ Tampilkan tiket + opsi cek status
 }
 ```
 
+#### PUT /api/public/queue/reschedule (baru)
+
+**Request:**
+```json
+{
+  "queue_number": "A-003",
+  "perkara_id": 123,
+  "new_slot_time": "10:00"
+}
+```
+
+**Response:**
+```json
+{
+  "data": {
+    "queue_number": "A-003",
+    "status": "waiting",
+    "slot_time": "10:00",
+    "pihak_nama": "Ahmad bin Ahmad",
+    "nomor_perkara": "123/Pdt.G/2024/PA.Pps",
+    "ruang_sidang": "Ruang Sidang 1"
+  },
+  "message": "Jadwal berhasil diubah. Slot baru: 10:00 - 11:00"
+}
+```
+
+**Error Response (slot penuh):**
+```json
+{
+  "error": "Slot 10:00 sudah penuh. Silakan pilih slot lain."
+}
+```
+
 #### GET /api/public/queue/status/{queue_number} (tetap)
 
 **Response:**
@@ -243,6 +310,20 @@ Tampilkan tiket + opsi cek status
 - Status: Menunggu/Dipanggil/Selesai
 - Tombol: "Cek Status Antrian" + "Booking Lagi"
 
+### 4.6 Halaman Status (dengan fitur Ganti Jadwal)
+- Card status booking saat ini
+- Detail: nomor antrian, jam, tanggal, ruangan, posisi antrian
+- Tombol aksi:
+  - "Cek Status" (refresh data)
+  - "Ganti Jadwal" (jika status: waiting)
+- Flow ganti jadwal:
+  1. User klik "Ganti Jadwal"
+  2. Tampilkan slot cards (seperti langkah 2)
+  3. User pilih slot baru
+  4. Konfirmasi modal: "Batalkan booking [slot lama] dan pindah ke [slot baru]?"
+  5. PUT /api/public/queue/reschedule
+  6. Tampilkan slot yang diperbarui
+
 ---
 
 ## 5. Struktur File
@@ -258,7 +339,8 @@ components/features/
 │   ├── step-confirm.tsx          # Langkah 3
 │   └── step-ticket.tsx           # Langkah 4
 ├── slot-card.tsx                 # Komponen card slot
-├── queue-status.tsx              # (tetap)
+├── reschedule-dialog.tsx         # Dialog konfirmasi ganti jadwal
+├── queue-status.tsx              # (tetap, tambah tombol "Ganti Jadwal")
 ├── schedule-table.tsx            # (tetap)
 └── hero-section.tsx              # (tetap)
 
@@ -316,6 +398,18 @@ export interface QueueBookRequest {
   nik: string;
   slot_time: string;
 }
+
+// Reschedule request
+export interface RescheduleRequest {
+  queue_number: string;
+  perkara_id: number;
+  new_slot_time: string;
+}
+
+export interface RescheduleResponse {
+  data: QueueTicket & { slot_time: string };
+  message: string;
+}
 ```
 
 ### 5.3 Service Functions Baru (queue-service.ts)
@@ -331,6 +425,11 @@ export async function getAvailableSlots(
   perkaraId: number,
   date: string
 ): Promise<SlotsResponse>;
+
+// Ganti jadwal (reschedule)
+export async function rescheduleQueue(
+  data: RescheduleRequest
+): Promise<RescheduleResponse>;
 ```
 
 ---
@@ -347,6 +446,8 @@ export async function getAvailableSlots(
 | Validasi NIK | Wajib terdaftar di perkara |
 | Slot Penuh | Disabled, tidak bisa dipilih |
 | Existing Queue | Return nomor antrian yang sudah ada |
+| Ganti Jadwal | Boleh jika status "waiting", nomor antrian tetap, slot lama dilepas |
+| Reschedule Race Condition | Slot baru harus tersedia saat konfirmasi, jika penuh → error |
 
 ---
 
@@ -359,6 +460,8 @@ export async function getAvailableSlots(
 | Slot sudah penuh (race condition) | Toast error + refresh slot |
 | Network error | Toast error + retry button |
 | API timeout | Toast error + retry button |
+| Reschedule — slot baru penuh | Toast error + refresh slot + minta pilih ulang |
+| Reschedule — status bukan "waiting" | Toast error: "Tidak bisa ganti jadwal, status sudah [status]" |
 
 ---
 
@@ -376,3 +479,4 @@ export async function getAvailableSlots(
 - Endpoint slot ketersediaan
 - Logika multi-pihak (shared queue number)
 - Manajemen kuota per slot
+- Endpoint reschedule (update slot_time, release slot lama, atomic check slot baru)
