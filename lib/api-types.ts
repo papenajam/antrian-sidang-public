@@ -78,3 +78,65 @@ export interface QueueStatistics {
   processedToday: number;
   lastUpdated: string;
 }
+
+// ============================================
+// Booking Wizard Types
+// ============================================
+
+// Validasi request/response
+export interface ValidateRequest {
+  nomor_perkara: string;
+  nik: string;
+}
+
+export interface ValidateResponse {
+  valid: boolean;
+  data?: {
+    perkara_id: number;
+    pihak_nama: string;
+    pihak_role: string;
+    jadwal: JadwalSidang;
+    existing_queue: ExistingQueue | null;
+  };
+  message?: string;
+}
+
+export interface ExistingQueue {
+  queue_number: string;
+  slot_time: string;
+  status: QueueStatus;
+}
+
+// Slot types
+export interface SlotInfo {
+  time: string;
+  capacity: number;
+  booked: number;
+  available: number;
+}
+
+export interface SlotsResponse {
+  data: {
+    tanggal: string;
+    slots: SlotInfo[];
+  };
+}
+
+// Booking request (diperbarui untuk wizard)
+export interface QueueBookWizardRequest {
+  perkara_id: number;
+  nik: string;
+  slot_time: string;
+}
+
+// Reschedule
+export interface RescheduleRequest {
+  queue_number: string;
+  perkara_id: number;
+  new_slot_time: string;
+}
+
+export interface RescheduleResponse {
+  data: QueueTicket & { slot_time: string };
+  message: string;
+}

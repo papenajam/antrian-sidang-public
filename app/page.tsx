@@ -1,7 +1,7 @@
 import { HeroSection } from "@/components/features/hero-section"
 import { QueueStatus } from "@/components/features/queue-status"
 import { ScheduleTable } from "@/components/features/schedule-table"
-import { RegistrationForm } from "@/components/features/registration-form"
+import { BookingWizard } from "@/components/features/booking-wizard/booking-wizard"
 
 export default function Home() {
   return (
@@ -13,7 +13,7 @@ export default function Home() {
           <ScheduleTable />
         </div>
         <div className="mt-12">
-          <RegistrationForm />
+          <BookingWizard />
         </div>
       </div>
     </div>
