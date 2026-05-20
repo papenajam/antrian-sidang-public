@@ -44,6 +44,14 @@ Mengubah workflow booking antrian sidang dari single-form menjadi step-by-step w
   - Pihak berikutnya dari perkara yang sama → mendapat nomor antrian yang SAMA
 - Tujuan: validasi operator di ruang sidang (semua pihak dari perkara yang sama terdaftar)
 
+**Detail Alur Multi-pihak:**
+1. Pihak pertama melakukan booking normal (pilih slot → dapat nomor antrian)
+2. Ketika pihak kedua (dari perkara yang sama) melakukan validasi:
+   - Sistem mendeteksi bahwa perkara sudah punya booking
+   - Langsung berikan nomor antrian yang sama (tanpa pilih slot)
+   - Slot yang digunakan mengikuti booking pertama
+3. Jika pihak pertama ganti jadwal, pihak kedua juga terdampak (slot berubah)
+
 ### 2.6 Tampilan Slot
 - Card per slot dengan informasi sisa kuota
 - Format: "09:00 - 10:00 (4/6 tersedia)"
@@ -114,7 +122,7 @@ PUT /api/public/queue/reschedule
 Slot diperbarui, nomor antrian tetap
 ```
 
-### 3.2 API Endpoints
+### 3.3 API Endpoints
 
 #### POST /api/public/queue/validate
 
@@ -288,6 +296,19 @@ Slot diperbarui, nomor antrian tetap
 - Loading state saat validasi
 - Error state jika NIK tidak valid
 
+**Penanganan Existing Queue di Langkah 1:**
+Jika response validasi mengandung `existing_queue` (booking sudah ada):
+- Tampilkan card informasi booking yang sudah ada:
+  - Nomor antrian
+  - Jam slot
+  - Status
+- Tampilkan 2 opsi:
+  1. "Lihat Status Booking" → redirect ke halaman status
+  2. "Ganti Jadwal" → lanjut ke langkah 2 (pilih slot baru)
+- Jika multi-pihak (perkara sudah booking oleh pihak lain):
+  - Tampilkan pesan: "Perkara ini sudah memiliki booking. Anda akan mendapatkan nomor antrian yang sama."
+  - Langsung berikan nomor antrian (skip langkah 2-3)
+
 ### 4.3 Langkah 2: Pilih Slot
 - Header: Info jadwal sidang (tanggal, perkara, pihak, ruangan)
 - Grid card slot (7 slot)
@@ -448,6 +469,7 @@ export async function rescheduleQueue(
 | Existing Queue | Return nomor antrian yang sudah ada |
 | Ganti Jadwal | Boleh jika status "waiting", nomor antrian tetap, slot lama dilepas |
 | Reschedule Race Condition | Slot baru harus tersedia saat konfirmasi, jika penuh → error |
+| **Atomic Booking** | Backend harus menggunakan atomic decrement (SELECT ... FOR UPDATE + UPDATE) untuk mengurangi kuota slot. Jika kuota habis saat proses booking, return error spesifik. Transaksi harus mencakup: (1) cek kuota, (2) kurangi kuota, (3) buat booking — semua dalam satu database transaction. |
 
 ---
 
