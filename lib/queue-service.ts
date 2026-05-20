@@ -12,6 +12,12 @@ import type {
   QueueStatistics,
   QueueTicket,
   AppSettings,
+  ValidateRequest,
+  ValidateResponse,
+  SlotsResponse,
+  RescheduleRequest,
+  RescheduleResponse,
+  QueueBookWizardRequest,
 } from '@/lib/api-types';
 
 /**
@@ -80,4 +86,40 @@ export function calculateQueueStatistics(
     processedToday,
     lastUpdated: now.toLocaleTimeString('id-ID'),
   };
+}
+
+/**
+ * Validasi nomor perkara dan NIK
+ * Mengecek apakah NIK terdaftar sebagai pihak di perkara
+ */
+export async function validatePerkara(data: ValidateRequest): Promise<ValidateResponse> {
+  return api.post<ValidateResponse>('/public/queue/validate', data);
+}
+
+/**
+ * Ambil ketersediaan slot untuk perkara dan tanggal tertentu
+ */
+export async function getAvailableSlots(
+  perkaraId: number,
+  date: string
+): Promise<SlotsResponse> {
+  return api.get<SlotsResponse>(
+    `/public/queue/slots?perkara_id=${perkaraId}&date=${date}`
+  );
+}
+
+/**
+ * Ganti jadwal booking (reschedule)
+ * Slot lama dilepas, slot baru diambil. Nomor antrian tetap.
+ */
+export async function rescheduleQueue(data: RescheduleRequest): Promise<RescheduleResponse> {
+  return api.put<RescheduleResponse>('/public/queue/reschedule', data);
+}
+
+/**
+ * Booking antrian untuk wizard (parameter baru: nik + slot_time)
+ * Digunakan oleh BookingWizard, bukan RegistrationForm lama
+ */
+export async function bookQueueWizard(data: QueueBookWizardRequest): Promise<QueueBookResponse> {
+  return api.post<QueueBookResponse>('/public/queue/book', data);
 }
