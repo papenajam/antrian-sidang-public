@@ -11,7 +11,7 @@ import { ExistingQueueCard } from "./existing-queue-card"
 import { toast } from "sonner"
 import type { SlotInfo, QueueTicket, ValidateResponse, ExistingQueue } from "@/lib/api-types"
 
-type Step = 1 | 2 | 3 | 4 | 'existing-queue'
+type Step = 1 | 2 | 3 | 4 | 'existing-queue' | 'multi-pihak'
 
 interface BookingData {
   perkaraId: number
@@ -25,7 +25,7 @@ interface BookingData {
 
 const WIZARD_STEPS = [
   { id: "validate", title: "Validasi" },
-  { id: "select-slot", title: "Pilih Slot" },
+  { id: "select-slot", title: "Pilih Jam" },
   { id: "confirm", title: "Konfirmasi" },
   { id: "ticket", title: "Tiket" },
 ]
@@ -96,6 +96,8 @@ export function BookingWizard() {
    * Jika tidak, lanjutkan ke langkah pemilihan slot.
    */
   const handleMultiPihak = (data: NonNullable<ValidateResponse['data']>) => {
+    // Multi-pihak: perkara sudah booking oleh pihak lain
+    // Langsung berikan nomor antrian yang sama (skip langkah 2-3)
     setBookingData((prev) => ({
       ...prev,
       perkaraId: data.perkara_id,
@@ -106,8 +108,18 @@ export function BookingWizard() {
     }))
 
     if (data.existing_queue) {
-      setExistingQueue(data.existing_queue)
-      setCurrentStep('existing-queue')
+      setTicket({
+        queue_number: data.existing_queue.queue_number,
+        status: data.existing_queue.status,
+        slot_time: data.existing_queue.slot_time,
+        pihak_nama: data.pihak_nama,
+        nomor_perkara: data.jadwal.nomor_perkara || "",
+        ruang_sidang: data.jadwal.ruangan,
+      })
+      setCurrentStep(4)
+      toast.info("Perkara ini sudah memiliki booking", {
+        description: `Anda mendapatkan nomor antrian yang sama: ${data.existing_queue.queue_number}`,
+      })
     } else {
       setCurrentStep(2)
     }

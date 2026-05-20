@@ -38,7 +38,7 @@ describe('BookingWizard', () => {
     // Gunakan queryAllByText karena "Validasi" muncul di progress bar dan StepValidate
     const validasiElements = screen.queryAllByText(/validasi/i)
     expect(validasiElements.length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText(/pilih slot/i)).toBeInTheDocument()
+    expect(screen.getByText(/pilih jam/i)).toBeInTheDocument()
     expect(screen.getByText(/konfirmasi/i)).toBeInTheDocument()
     expect(screen.getByText(/tiket/i)).toBeInTheDocument()
   })
@@ -75,7 +75,7 @@ describe('BookingWizard', () => {
     })
   })
 
-  it('shows existing queue card when existing queue found', async () => {
+  it('shows ticket when multi-pihak with existing queue found', async () => {
     const mockResponse = {
       valid: true,
       data: {
@@ -93,7 +93,7 @@ describe('BookingWizard', () => {
         existing_queue: {
           queue_number: 'A-003',
           slot_time: '09:00',
-          status: 'waiting',
+          status: 'waiting' as const,
         },
       },
     }
@@ -107,7 +107,8 @@ describe('BookingWizard', () => {
     await user.click(screen.getByRole('button', { name: /cek jadwal/i }))
 
     await waitFor(() => {
-      expect(screen.getByText(/booking sudah ada/i)).toBeInTheDocument()
+      expect(screen.getByText('A-003')).toBeInTheDocument()
+      expect(screen.getByText(/booking berhasil/i)).toBeInTheDocument()
     })
   })
 })
