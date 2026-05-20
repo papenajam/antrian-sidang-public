@@ -8,14 +8,16 @@ import { Label } from "@/components/ui/label"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { Loader2, Search } from "lucide-react"
 import { validatePerkara } from "@/lib/queue-service"
-import type { ValidateResponse } from "@/lib/api-types"
+import type { ValidateResponse, ExistingQueue } from "@/lib/api-types"
 
 interface StepValidateProps {
   onNext: (data: NonNullable<ValidateResponse['data']>) => void
+  onExistingQueue: (queue: ExistingQueue) => void
+  onMultiPihak: (data: NonNullable<ValidateResponse['data']>) => void
   onError: (message: string) => void
 }
 
-export function StepValidate({ onNext, onError }: StepValidateProps) {
+export function StepValidate({ onNext, onExistingQueue, onMultiPihak, onError }: StepValidateProps) {
   const [nomorPerkara, setNomorPerkara] = useState("")
   const [nik, setNik] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -52,7 +54,11 @@ export function StepValidate({ onNext, onError }: StepValidateProps) {
       })
 
       if (response.valid && response.data) {
-        onNext(response.data)
+        if (response.data.existing_queue) {
+          onMultiPihak(response.data)
+        } else {
+          onNext(response.data)
+        }
       } else {
         onError(response.message || "Validasi gagal")
       }

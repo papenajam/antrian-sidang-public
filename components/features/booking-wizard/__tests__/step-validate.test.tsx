@@ -11,6 +11,8 @@ vi.mock('@/lib/queue-service', () => ({
 describe('StepValidate', () => {
   const defaultProps = {
     onNext: vi.fn(),
+    onExistingQueue: vi.fn(),
+    onMultiPihak: vi.fn(),
     onError: vi.fn(),
   }
 
@@ -52,7 +54,7 @@ describe('StepValidate', () => {
     vi.mocked(queueService.validatePerkara).mockResolvedValue(mockResponse)
 
     const onNext = vi.fn()
-    render(<StepValidate onNext={onNext} onError={vi.fn()} />)
+    render(<StepValidate onNext={onNext} onExistingQueue={vi.fn()} onMultiPihak={vi.fn()} onError={vi.fn()} />)
 
     await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await userEvent.type(screen.getByLabelText(/nik/i), '3201234567890001')
@@ -75,7 +77,7 @@ describe('StepValidate', () => {
     vi.mocked(queueService.validatePerkara).mockResolvedValue(mockResponse)
 
     const onError = vi.fn()
-    render(<StepValidate onNext={vi.fn()} onError={onError} />)
+    render(<StepValidate onNext={vi.fn()} onExistingQueue={vi.fn()} onMultiPihak={vi.fn()} onError={onError} />)
 
     await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await userEvent.type(screen.getByLabelText(/nik/i), '0000000000000000')
@@ -83,6 +85,35 @@ describe('StepValidate', () => {
 
     await waitFor(() => {
       expect(onError).toHaveBeenCalledWith('NIK tidak terdaftar')
+    })
+  })
+
+  it('calls onMultiPihak when existing queue found', async () => {
+    const mockResponse = {
+      valid: true,
+      data: {
+        perkara_id: 123,
+        pihak_nama: 'Ahmad',
+        pihak_role: 'Penggugat',
+        jadwal: { tanggal: '2026-05-30', ruangan: 'Ruang 1' },
+        existing_queue: {
+          queue_number: 'A-003',
+          slot_time: '09:00',
+          status: 'waiting',
+        },
+      },
+    }
+    vi.mocked(queueService.validatePerkara).mockResolvedValue(mockResponse)
+
+    const onMultiPihak = vi.fn()
+    render(<StepValidate onNext={vi.fn()} onExistingQueue={vi.fn()} onMultiPihak={onMultiPihak} onError={vi.fn()} />)
+
+    await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
+    await userEvent.type(screen.getByLabelText(/nik/i), '3201234567890001')
+    fireEvent.click(screen.getByRole('button', { name: /cek jadwal/i }))
+
+    await waitFor(() => {
+      expect(onMultiPihak).toHaveBeenCalledWith(mockResponse.data)
     })
   })
 })
