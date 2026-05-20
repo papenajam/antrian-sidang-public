@@ -50,17 +50,34 @@ function getProgressStep(step: Step): number {
   }
 }
 
+const INITIAL_BOOKING_DATA: BookingData = {
+  perkaraId: 0,
+  nik: "",
+  namaPihak: "",
+  nomorPerkara: "",
+  tanggal: "",
+  ruangan: "",
+  selectedSlot: null,
+}
+
+/**
+ * Mapping data validasi ke bookingData.
+ * Digunakan oleh handleValidateNext dan handleMultiPihak.
+ */
+function mapValidationToBooking(data: NonNullable<ValidateResponse['data']>, prev: BookingData): BookingData {
+  return {
+    ...prev,
+    perkaraId: data.perkara_id,
+    namaPihak: data.pihak_nama,
+    nomorPerkara: data.jadwal.nomor_perkara || prev.nomorPerkara,
+    tanggal: data.jadwal.waktu,
+    ruangan: data.jadwal.ruangan,
+  }
+}
+
 export function BookingWizard() {
   const [currentStep, setCurrentStep] = useState<Step>(1)
-  const [bookingData, setBookingData] = useState<BookingData>({
-    perkaraId: 0,
-    nik: "",
-    namaPihak: "",
-    nomorPerkara: "",
-    tanggal: "",
-    ruangan: "",
-    selectedSlot: null,
-  })
+  const [bookingData, setBookingData] = useState<BookingData>(INITIAL_BOOKING_DATA)
   const [ticket, setTicket] = useState<(QueueTicket & { slot_time: string }) | null>(null)
   const [existingQueue, setExistingQueue] = useState<ExistingQueue | null>(null)
 
@@ -69,14 +86,7 @@ export function BookingWizard() {
    * Langsung menuju langkah pemilihan slot.
    */
   const handleValidateNext = (data: NonNullable<ValidateResponse['data']>) => {
-    setBookingData((prev) => ({
-      ...prev,
-      perkaraId: data.perkara_id,
-      namaPihak: data.pihak_nama,
-      nomorPerkara: data.jadwal.nomor_perkara || prev.nomorPerkara,
-      tanggal: data.jadwal.waktu,
-      ruangan: data.jadwal.ruangan,
-    }))
+    setBookingData((prev) => mapValidationToBooking(data, prev))
     setCurrentStep(2)
   }
 
@@ -98,14 +108,7 @@ export function BookingWizard() {
   const handleMultiPihak = (data: NonNullable<ValidateResponse['data']>) => {
     // Multi-pihak: perkara sudah booking oleh pihak lain
     // Langsung berikan nomor antrian yang sama (skip langkah 2-3)
-    setBookingData((prev) => ({
-      ...prev,
-      perkaraId: data.perkara_id,
-      namaPihak: data.pihak_nama,
-      nomorPerkara: data.jadwal.nomor_perkara || prev.nomorPerkara,
-      tanggal: data.jadwal.waktu,
-      ruangan: data.jadwal.ruangan,
-    }))
+    setBookingData((prev) => mapValidationToBooking(data, prev))
 
     if (data.existing_queue) {
       setTicket({
@@ -173,15 +176,7 @@ export function BookingWizard() {
    */
   const handleBookAgain = () => {
     setCurrentStep(1)
-    setBookingData({
-      perkaraId: 0,
-      nik: "",
-      namaPihak: "",
-      nomorPerkara: "",
-      tanggal: "",
-      ruangan: "",
-      selectedSlot: null,
-    })
+    setBookingData(INITIAL_BOOKING_DATA)
     setTicket(null)
     setExistingQueue(null)
   }
