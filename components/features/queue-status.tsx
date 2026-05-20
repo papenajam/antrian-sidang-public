@@ -6,7 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { NumberTicker } from "@/components/magic/number-ticker"
 import { motion } from "framer-motion"
-import { Users, Clock, CheckCircle } from "lucide-react"
+import { Users, Clock, CheckCircle, ArrowLeftRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { RescheduleDialog } from "./reschedule-dialog"
 import { getTodaySchedule, calculateQueueStatistics } from "@/lib/queue-service"
 import { toast } from "sonner"
 
@@ -20,42 +22,44 @@ interface QueueData {
 export function QueueStatus() {
   const [data, setData] = useState<QueueData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [showReschedule, setShowReschedule] = useState(false)
+
+  // Fungsi fetch data dipisah agar bisa dipanggil ulang dari onSuccess
+  const fetchData = async () => {
+    try {
+      // Fetch jadwal hari ini
+      const scheduleResponse = await getTodaySchedule()
+
+      if (scheduleResponse.error) {
+        toast.error(scheduleResponse.error)
+        return
+      }
+
+      // Hitung statistik dari data jadwal
+      // Karena API tidak mengembalikan data tiket secara langsung,
+      // kita gunakan data jadwal sebagai acuan
+      const statistics = calculateQueueStatistics(
+        scheduleResponse.data,
+        [] // TODO: Perlu endpoint untuk fetch semua tiket hari ini
+      )
+
+      setData({
+        currentNumber: statistics.currentNumber,
+        waitingCount: statistics.waitingCount,
+        processedToday: statistics.processedToday,
+        lastUpdated: statistics.lastUpdated,
+      })
+    } catch (error) {
+      toast.error("Gagal memuat status antrian")
+      console.error("Error fetching queue status:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        // Fetch jadwal hari ini
-        const scheduleResponse = await getTodaySchedule()
-        
-        if (scheduleResponse.error) {
-          toast.error(scheduleResponse.error)
-          return
-        }
-
-        // Hitung statistik dari data jadwal
-        // Karena API tidak mengembalikan data tiket secara langsung,
-        // kita gunakan data jadwal sebagai acuan
-        const statistics = calculateQueueStatistics(
-          scheduleResponse.data,
-          [] // TODO: Perlu endpoint untuk fetch semua tiket hari ini
-        )
-
-        setData({
-          currentNumber: statistics.currentNumber,
-          waitingCount: statistics.waitingCount,
-          processedToday: statistics.processedToday,
-          lastUpdated: statistics.lastUpdated,
-        })
-      } catch (error) {
-        toast.error("Gagal memuat status antrian")
-        console.error("Error fetching queue status:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchData()
-    
+
     // Refresh data setiap 30 detik
     const interval = setInterval(fetchData, 30000)
     return () => clearInterval(interval)
@@ -140,8 +144,33 @@ export function QueueStatus() {
               Estimasi waktu tunggu: <strong>15-20 menit</strong> per nomor
             </span>
           </div>
+
+          {/* Tombol ganti jadwal */}
+          <div className="flex justify-center">
+            <Button
+              variant="outline"
+              onClick={() => setShowReschedule(true)}
+              className="mt-4"
+            >
+              <ArrowLeftRight className="mr-2 h-4 w-4" />
+              Ganti Jadwal
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Dialog ganti jadwal */}
+      <RescheduleDialog
+        open={showReschedule}
+        onOpenChange={setShowReschedule}
+        queueNumber="A-003" // TODO: Ambil dari state booking
+        perkaraId={123} // TODO: Ambil dari state booking
+        currentSlot="09:00" // TODO: Ambil dari state booking
+        tanggal={new Date().toISOString().split('T')[0]}
+        onSuccess={() => {
+          fetchData()
+        }}
+      />
     </BlurFade>
   )
 }
