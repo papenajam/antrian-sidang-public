@@ -18,6 +18,7 @@ interface StepConfirmProps {
   ruangan: string
   onNext: (ticket: QueueTicket) => void
   onBack: () => void
+  onError: (message: string) => void
 }
 
 export function StepConfirm({
@@ -30,6 +31,7 @@ export function StepConfirm({
   ruangan,
   onNext,
   onBack,
+  onError,
 }: StepConfirmProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -58,7 +60,7 @@ export function StepConfirm({
 
       onNext(response.data)
     } catch (error) {
-      console.error("Error booking:", error)
+      onError("Terjadi kesalahan saat booking. Silakan coba lagi.")
     } finally {
       setIsSubmitting(false)
     }

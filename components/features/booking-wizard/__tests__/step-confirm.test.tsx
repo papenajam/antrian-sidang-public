@@ -18,6 +18,7 @@ describe('StepConfirm', () => {
     ruangan: 'Ruang Sidang 1',
     onNext: vi.fn(),
     onBack: vi.fn(),
+    onError: vi.fn(),
   }
 
   beforeEach(() => {
@@ -70,5 +71,18 @@ describe('StepConfirm', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /kembali/i }))
     expect(onBack).toHaveBeenCalled()
+  })
+
+  it('calls onError when booking fails', async () => {
+    vi.mocked(queueService.bookQueueWizard).mockRejectedValue(new Error('Network error'))
+
+    const onError = vi.fn()
+    render(<StepConfirm {...defaultProps} onError={onError} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /konfirmasi booking/i }))
+
+    await waitFor(() => {
+      expect(onError).toHaveBeenCalledWith('Terjadi kesalahan saat booking. Silakan coba lagi.')
+    })
   })
 })
