@@ -191,81 +191,84 @@ export function BookingWizard() {
   const progressStep = getProgressStep(currentStep)
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto">
       {/* Progress Bar */}
-      <div role="progressbar" aria-valuenow={progressStep + 1} aria-valuemin={1} aria-valuemax={4}>
+      <div 
+        role="progressbar" 
+        aria-valuenow={progressStep + 1} 
+        aria-valuemin={1} 
+        aria-valuemax={4}
+        className="mb-8"
+      >
         <FormProgress steps={WIZARD_STEPS} currentStep={progressStep} />
       </div>
 
-      {/* Langkah 1: Validasi */}
-      {currentStep === 1 && (
-        <BlurFade>
-          <StepValidate
-            onNext={handleValidateNext}
-            onMultiPihak={handleMultiPihak}
-            onError={handleValidateError}
-          />
-        </BlurFade>
-      )}
+      {/* Step Content */}
+      <div className="w-full">
+        {currentStep === 1 && (
+          <BlurFade>
+            <StepValidate
+              onNext={handleValidateNext}
+              onMultiPihak={handleMultiPihak}
+              onError={handleValidateError}
+            />
+          </BlurFade>
+        )}
 
-      {/* Existing Queue Card */}
-      {currentStep === 'existing-queue' && existingQueue && (
-        <BlurFade>
-          <ExistingQueueCard
-            queue={existingQueue}
-            onViewStatus={handleCheckStatus}
-            onReschedule={handleReschedule}
-            onBookAgain={handleBookAgain}
-          />
-        </BlurFade>
-      )}
+        {currentStep === 'existing-queue' && existingQueue && (
+          <BlurFade>
+            <ExistingQueueCard
+              queue={existingQueue}
+              onViewStatus={handleCheckStatus}
+              onReschedule={handleReschedule}
+              onBookAgain={handleBookAgain}
+            />
+          </BlurFade>
+        )}
 
-      {/* Langkah 2: Pilih Slot */}
-      {currentStep === 2 && (
-        <BlurFade>
-          <StepSelectSlot
-            perkaraId={bookingData.perkaraId}
-            tanggal={bookingData.tanggal}
-            ruangan={bookingData.ruangan}
-            onNext={handleSlotNext}
-            onBack={() => setCurrentStep(1)}
-            currentSlot={existingQueue?.slot_time}
-          />
-        </BlurFade>
-      )}
+        {currentStep === 2 && (
+          <BlurFade>
+            <StepSelectSlot
+              perkaraId={bookingData.perkaraId}
+              tanggal={bookingData.tanggal}
+              ruangan={bookingData.ruangan}
+              onNext={handleSlotNext}
+              onBack={() => setCurrentStep(1)}
+              currentSlot={existingQueue?.slot_time}
+            />
+          </BlurFade>
+        )}
 
-      {/* Langkah 3: Konfirmasi */}
-      {currentStep === 3 && bookingData.selectedSlot && (
-        <BlurFade>
-          <StepConfirm
-            perkaraId={bookingData.perkaraId}
-            nik={bookingData.nik}
-            namaPihak={bookingData.namaPihak}
-            nomorPerkara={bookingData.nomorPerkara}
-            tanggal={bookingData.tanggal}
-            slot={bookingData.selectedSlot}
-            ruangan={bookingData.ruangan}
-            onNext={handleConfirmNext}
-            onBack={() => setCurrentStep(2)}
-            onError={handleConfirmError}
-          />
-        </BlurFade>
-      )}
+        {currentStep === 3 && bookingData.selectedSlot && (
+          <BlurFade>
+            <StepConfirm
+              perkaraId={bookingData.perkaraId}
+              nik={bookingData.nik}
+              namaPihak={bookingData.namaPihak}
+              nomorPerkara={bookingData.nomorPerkara}
+              tanggal={bookingData.tanggal}
+              slot={bookingData.selectedSlot}
+              ruangan={bookingData.ruangan}
+              onNext={handleConfirmNext}
+              onBack={() => setCurrentStep(2)}
+              onError={handleConfirmError}
+            />
+          </BlurFade>
+        )}
 
-      {/* Langkah 4: Tiket */}
-      {currentStep === 4 && ticket && (
-        <BlurFade>
-          <StepTicket
-            ticket={{
-              ...ticket,
-              // Ekstrak date portion dari timestamp untuk ditampilkan di tiket
-              tanggal: bookingData.tanggal ? bookingData.tanggal.split("T")[0] : undefined,
-            }}
-            onCheckStatus={handleCheckStatus}
-            onBookAgain={handleBookAgain}
-          />
-        </BlurFade>
-      )}
+        {currentStep === 4 && ticket && (
+          <BlurFade>
+            <StepTicket
+              ticket={{
+                ...ticket,
+                tanggal: bookingData.tanggal ? bookingData.tanggal.split("T")[0] : undefined,
+              }}
+              onCheckStatus={handleCheckStatus}
+              onBookAgain={handleBookAgain}
+            />
+          </BlurFade>
+        )}
+      </div>
     </div>
   )
 }

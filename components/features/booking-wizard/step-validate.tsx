@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { BlurFade } from "@/components/magic/blur-fade"
-import { Loader2, Search, Info, Lightbulb, AlertCircle } from "lucide-react"
+import { Loader2, Search, Info, AlertCircle } from "lucide-react"
 import { validatePerkara } from "@/lib/queue-service"
 import type { ValidateResponse } from "@/lib/api-types"
 
@@ -16,7 +16,6 @@ interface StepValidateProps {
   onError: (message: string) => void
 }
 
-// Note: onExistingQueue prop is kept for future multi-party handling expansion
 export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProps) {
   const [nomorPerkara, setNomorPerkara] = useState("")
   const [nik, setNik] = useState("")
@@ -32,7 +31,7 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
     }
 
     if (!nik.trim()) {
-      newErrors.nik = "NIK wajib diisi"
+      newErrors.nik = "Nomor NIK wajib diisi"
     } else if (!/^\d{16}$/.test(nik)) {
       newErrors.nik = "NIK harus 16 digit angka"
     }
@@ -62,33 +61,30 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
           onNext(response.data)
         }
       } else {
-        // Tangani error API dengan pesan yang lebih spesifik
         const errorMessage = response.message || "Validasi gagal"
         if (
           errorMessage.toLowerCase().includes("tidak ditemukan") ||
-          errorMessage.toLowerCase().includes("not found") ||
-          errorMessage.toLowerCase().includes("tidak ada")
+          errorMessage.toLowerCase().includes("not found")
         ) {
-          setErrors({ api: `Nomor perkara "${nomorPerkara}" tidak ditemukan dalam sistem. Pastikan nomor perkara sesuai dengan surat panggilan.` })
+          setErrors({ api: `Nomor perkara tidak ditemukan. Pastikan nomor perkara sesuai dengan surat panggilan.` })
         } else if (
           errorMessage.toLowerCase().includes("nik") ||
           errorMessage.toLowerCase().includes("ktp")
         ) {
-          setErrors({ api: `NIK "${nik}" tidak cocok dengan data perkara. Pastikan NIK sesuai dengan KTP.` })
+          setErrors({ api: `NIK tidak cocok dengan data perkara. Pastikan NIK sesuai dengan KTP.` })
         } else {
           setErrors({ api: errorMessage })
         }
         onError(errorMessage)
       }
     } catch {
-      setErrors({ api: "Terjadi kesalahan saat validasi. Silakan coba lagi dalam beberapa saat." })
-      onError("Terjadi kesalahan saat validasi. Silakan coba lagi.")
+      setErrors({ api: "Terjadi kesalahan saat validasi. Silakan coba lagi." })
+      onError("Terjadi kesalahan saat validasi.")
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  // Handler untuk membersihkan error saat input berubah
   const handleNomorPerkaraChange = (value: string) => {
     setNomorPerkara(value)
     if (touched.nomorPerkara && errors.nomorPerkara) {
@@ -100,7 +96,6 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
   }
 
   const handleNikChange = (value: string) => {
-    // Filter hanya angka
     const numericValue = value.replace(/\D/g, "").slice(0, 16)
     setNik(numericValue)
     if (touched.nik && errors.nik) {
@@ -114,45 +109,26 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
   return (
     <BlurFade>
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+        <CardHeader className="text-center">
+          <CardTitle className="flex items-center justify-center gap-2">
             <Search className="h-5 w-5 text-primary" />
             Validasi Data Perkara
           </CardTitle>
           <CardDescription>
-            Masukkan nomor perkara dan NIK Anda untuk memverifikasi jadwal sidang dan ketersediaan slot booking.
+            Masukkan nomor perkara dan NIK untuk verifikasi jadwal sidang.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Tips Help Box */}
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
-              <div className="flex items-start gap-3">
-                <Lightbulb className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
-                <div className="text-sm text-blue-800">
-                  <p className="font-semibold mb-2">💡 Tips Memasukkan Data:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    <li>
-                      <strong>Nomor perkara</strong> ada di surat panggilan sidang — format:{" "}
-                      <code className="rounded bg-blue-100 px-1">123/Pdt.G/2024/PA.Pps</code>
-                    </li>
-                    <li>
-                      <strong>NIK</strong> adalah 16 digit nomor di KTP Anda
-                    </li>
-                    <li>Pastikan tidak ada spasi atau karakter khusus</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-
-            {/* Error dari API */}
+        <CardContent className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* API Error Alert */}
             {errors.api && (
-              <div className="flex items-start gap-3 rounded-xl border-2 border-red-200 bg-red-50 p-4">
-                <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
-                <p className="text-sm text-red-800">{errors.api}</p>
+              <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+                <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
+                <p className="text-sm text-red-700">{errors.api}</p>
               </div>
             )}
 
+            {/* Nomor Perkara Input */}
             <div className="space-y-2">
               <Label htmlFor="nomorPerkara">
                 Nomor Perkara <span className="text-destructive">*</span>
@@ -164,34 +140,31 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
                 onChange={(e) => handleNomorPerkaraChange(e.target.value)}
                 onBlur={() => setTouched((prev) => ({ ...prev, nomorPerkara: true }))}
                 aria-invalid={!!errors.nomorPerkara}
-                className={errors.nomorPerkara ? "border-destructive focus-visible:ring-destructive" : ""}
+                className={errors.nomorPerkara ? "border-destructive" : ""}
               />
               {errors.nomorPerkara && (
-                <p className="text-sm text-destructive" role="alert">
-                  {errors.nomorPerkara}
-                </p>
+                <p className="text-sm text-destructive">{errors.nomorPerkara}</p>
               )}
             </div>
 
+            {/* NIK Input */}
             <div className="space-y-2">
               <Label htmlFor="nik">
-                NIK (Nomor Induk Kependudukan) <span className="text-destructive">*</span>
+                NIK (Nomor KTP) <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="nik"
-                placeholder="16 digit NIK sesuai KTP"
+                placeholder="16 digit nomor KTP"
                 value={nik}
                 onChange={(e) => handleNikChange(e.target.value)}
                 onBlur={() => setTouched((prev) => ({ ...prev, nik: true }))}
                 maxLength={16}
                 aria-invalid={!!errors.nik}
-                className={errors.nik ? "border-destructive focus-visible:ring-destructive" : ""}
+                className={errors.nik ? "border-destructive" : ""}
               />
               <div className="flex items-center justify-between">
                 {errors.nik ? (
-                  <p className="text-sm text-destructive" role="alert">
-                    {errors.nik}
-                  </p>
+                  <p className="text-sm text-destructive">{errors.nik}</p>
                 ) : (
                   <p className="text-xs text-muted-foreground">
                     {nik.length}/16 digit
@@ -200,11 +173,13 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
               </div>
             </div>
 
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full"
-            >
+            {/* Tips - subtle */}
+            <div className="flex items-start gap-2 text-xs text-muted-foreground">
+              <Info className="mt-0.5 h-3 w-3 flex-shrink-0" />
+              <span>Nomor perkara ada di surat panggilan. NIK ada di KTP Anda.</span>
+            </div>
+
+            <Button type="submit" disabled={isSubmitting} className="w-full" size="lg">
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -212,7 +187,7 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
                 </>
               ) : (
                 <>
-                  Cek Jadwal & Lanjutkan
+                  Lanjutkan
                   <Search className="ml-2 h-4 w-4" />
                 </>
               )}
