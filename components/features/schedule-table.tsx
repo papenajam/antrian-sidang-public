@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { BlurFade } from "@/components/magic/blur-fade"
-import { Calendar, Clock, User, Inbox } from "lucide-react"
+import { Calendar, Clock, User, Inbox, MapPin } from "lucide-react"
 import { getTodaySchedule } from "@/lib/queue-service"
 import type { JadwalSidang } from "@/lib/api-types"
 import { toast } from "sonner"
@@ -34,18 +34,26 @@ export function ScheduleTable() {
           toast.error(response.error)
           setSchedules([])
         } else {
-          // Transform API response ke format component
           const transformed: Schedule[] = response.data.map(
-            (jadwal: JadwalSidang) => ({
-              id: jadwal.perkara_id.toString(),
-              perkaraId: jadwal.perkara_id,
-              caseNumber: jadwal.nomor_perkara,
-              partyName: jadwal.pihak_nama,
-              time: jadwal.waktu,
-              room: jadwal.ruangan,
-              agenda: jadwal.agenda,
-              status: "scheduled" as const,
-            })
+            (jadwal: JadwalSidang) => {
+              const extractPartyName = (paraPihak: string | null): string => {
+                if (!paraPihak) return "-"
+                const cleanText = paraPihak.replace(/<[^>]*>/g, " ").trim()
+                const firstParty = cleanText.split("  ")[0] || cleanText
+                return firstParty || "-"
+              }
+
+              return {
+                id: jadwal.perkara_id.toString(),
+                perkaraId: jadwal.perkara_id,
+                caseNumber: jadwal.perkara?.nomor_perkara || "-",
+                partyName: extractPartyName(jadwal.perkara?.para_pihak || null),
+                time: jadwal.jam_sidang ? jadwal.jam_sidang.substring(0, 5) : "00:00",
+                room: jadwal.ruangan || "-",
+                agenda: jadwal.agenda || "-",
+                status: "scheduled" as const,
+              }
+            }
           )
           setSchedules(transformed)
         }
@@ -59,8 +67,6 @@ export function ScheduleTable() {
     }
 
     fetchData()
-    
-    // Refresh data setiap 60 detik
     const interval = setInterval(fetchData, 60000)
     return () => clearInterval(interval)
   }, [])
@@ -68,7 +74,7 @@ export function ScheduleTable() {
   const getStatusBadge = (status: Schedule["status"]) => {
     const statusConfig = {
       scheduled: { label: "Terjadwal", variant: "secondary" as const },
-      in_progress: { label: "Sedang Berlangsung", variant: "default" as const },
+      in_progress: { label: "Sedang", variant: "default" as const },
       completed: { label: "Selesai", variant: "outline" as const },
       postponed: { label: "Ditunda", variant: "destructive" as const },
     }
@@ -84,7 +90,7 @@ export function ScheduleTable() {
         <CardContent>
           <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full" />
+              <Skeleton key={i} className="h-20 w-full" />
             ))}
           </div>
         </CardContent>
@@ -111,29 +117,38 @@ export function ScheduleTable() {
               </p>
               <button
                 onClick={async () => {
-                  setIsLoading(true);
+                  setIsLoading(true)
                   try {
-                    const response = await getTodaySchedule();
+                    const response = await getTodaySchedule()
                     if (!response.error) {
                       const transformed: Schedule[] = response.data.map(
-                        (jadwal: JadwalSidang) => ({
-                          id: jadwal.perkara_id.toString(),
-                          perkaraId: jadwal.perkara_id,
-                          caseNumber: jadwal.nomor_perkara,
-                          partyName: jadwal.pihak_nama,
-                          time: jadwal.waktu,
-                          room: jadwal.ruangan,
-                          agenda: jadwal.agenda,
-                          status: "scheduled" as const,
-                        })
-                      );
-                      setSchedules(transformed);
+                        (jadwal: JadwalSidang) => {
+                          const extractPartyName = (paraPihak: string | null): string => {
+                            if (!paraPihak) return "-"
+                            const cleanText = paraPihak.replace(/<[^>]*>/g, " ").trim()
+                            const firstParty = cleanText.split("  ")[0] || cleanText
+                            return firstParty || "-"
+                          }
+
+                          return {
+                            id: jadwal.perkara_id.toString(),
+                            perkaraId: jadwal.perkara_id,
+                            caseNumber: jadwal.perkara?.nomor_perkara || "-",
+                            partyName: extractPartyName(jadwal.perkara?.para_pihak || null),
+                            time: jadwal.jam_sidang ? jadwal.jam_sidang.substring(0, 5) : "00:00",
+                            room: jadwal.ruangan || "-",
+                            agenda: jadwal.agenda || "-",
+                            status: "scheduled" as const,
+                          }
+                        }
+                      )
+                      setSchedules(transformed)
                     }
                   } catch (error) {
-                    toast.error("Gagal memuat jadwal sidang");
-                    console.error("Error refreshing schedule:", error);
+                    toast.error("Gagal memuat jadwal sidang")
+                    console.error("Error refreshing schedule:", error)
                   } finally {
-                    setIsLoading(false);
+                    setIsLoading(false)
                   }
                 }}
                 className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
@@ -143,39 +158,47 @@ export function ScheduleTable() {
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {schedules.map((schedule, index) => (
                 <div
                   key={schedule.id}
-                  className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                  className="flex flex-col gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/30 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
                   style={{
                     animationDelay: `${index * 0.05}s`,
                   }}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
+                  {/* Left: Time + Info */}
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary text-lg font-bold text-white">
                       {schedule.time.split(":")[0]}
                     </div>
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{schedule.caseNumber}</div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <User className="h-3 w-3 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-semibold text-sm sm:text-base">
+                        {schedule.caseNumber}
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground sm:text-sm">
+                        <User className="h-3.5 w-3.5 flex-shrink-0" />
                         <span className="truncate">{schedule.partyName}</span>
                       </div>
                       {schedule.agenda && (
-                        <div className="mt-1 text-xs text-muted-foreground truncate">
-                          Agenda: {schedule.agenda}
+                        <div className="mt-1 text-xs text-muted-foreground">
+                          {schedule.agenda}
                         </div>
                       )}
                     </div>
                   </div>
-                  <div className="ml-4 flex flex-shrink-0 flex-wrap items-center justify-end gap-2 text-sm">
-                    <div className="flex items-center gap-1 text-muted-foreground">
+
+                  {/* Right: Time + Room + Badge */}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
                       <Clock className="h-4 w-4" />
-                      {schedule.time}
+                      <span>{schedule.time}</span>
                     </div>
-                    <div className="font-medium">{schedule.room}</div>
-                    <Badge variant={getStatusBadge(schedule.status).variant}>
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{schedule.room}</span>
+                    </div>
+                    <Badge variant={getStatusBadge(schedule.status).variant} className="text-xs">
                       {getStatusBadge(schedule.status).label}
                     </Badge>
                   </div>
