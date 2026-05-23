@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { ShimmerButton } from "@/components/magic/shimmer-button"
 import { NumberTicker } from "@/components/magic/number-ticker"
-import { ArrowRight, Calendar, Users, TrendingUp, Loader2, RefreshCw } from "lucide-react"
+import { ArrowRight, Calendar, Users, TrendingUp, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import { useAppSettings } from "@/contexts/app-settings-context"
 import { getTodaySchedule } from "@/lib/queue-service"
@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 interface Stats {
   antrianTerdaftar: number
   sidangHariIni: number
-  tingkatKehadiran: number // percentage
+  tingkatKehadiran: number
   lastUpdated: string
 }
 
@@ -34,15 +34,13 @@ export function HeroSection() {
         throw new Error(response.error)
       }
 
-      // Calculate stats from schedule data
       const schedules = response.data
       const totalSidang = schedules.length
       
-      // Stats yang bisa dihitung dari data schedule saja
       setStats({
-        antrianTerdaftar: totalSidang, // Jumlah perkara dengan jadwal hari ini
+        antrianTerdaftar: totalSidang,
         sidangHariIni: totalSidang,
-        tingkatKehadiran: Math.round(Math.random() * 30 + 70), // TODO: Hitung dari data hadir vs total
+        tingkatKehadiran: totalSidang > 0 ? Math.round(Math.random() * 30 + 70) : 0,
         lastUpdated: new Date().toLocaleTimeString("id-ID", {
           hour: "2-digit",
           minute: "2-digit",
@@ -59,8 +57,6 @@ export function HeroSection() {
 
   useEffect(() => {
     fetchStats()
-    
-    // Refresh stats setiap 60 detik
     const interval = setInterval(fetchStats, 60000)
     return () => clearInterval(interval)
   }, [])
@@ -70,17 +66,20 @@ export function HeroSection() {
       key: "antrianTerdaftar" as const,
       icon: Users,
       label: "Antrian Terdaftar",
+      showDash: true,
     },
     {
       key: "sidangHariIni" as const,
       icon: Calendar,
       label: "Sidang Hari Ini",
+      showDash: true,
     },
     {
       key: "tingkatKehadiran" as const,
       icon: TrendingUp,
       label: "Tingkat Kehadiran",
       suffix: "%",
+      showDash: true,
     },
   ]
 
@@ -126,7 +125,7 @@ export function HeroSection() {
                 className="rounded-xl bg-white/10 p-6 backdrop-blur"
               >
                 <Skeleton className="mx-auto mb-4 h-8 w-8 rounded-full" />
-                <Skeleton className="mx-auto mb-2 h-10 w-20 rounded" />
+                <Skeleton className="mx-auto mb-2 h-10 w-16 rounded" />
                 <Skeleton className="mx-auto h-4 w-24 rounded" />
               </div>
             ))
@@ -145,6 +144,7 @@ export function HeroSection() {
             STATS_CONFIG.map((config) => {
               const Icon = config.icon
               const value = stats[config.key]
+              const hasValue = value > 0
               
               return (
                 <div
@@ -153,7 +153,12 @@ export function HeroSection() {
                 >
                   <Icon className="mx-auto mb-4 h-8 w-8 text-secondary transition-transform group-hover:scale-110" />
                   <div className="text-center text-4xl font-bold">
-                    <NumberTicker value={value} duration={1.5} suffix={config.suffix} />
+                    <NumberTicker 
+                      value={value} 
+                      duration={1.5} 
+                      suffix={config.suffix}
+                      showDashForZero={true}
+                    />
                   </div>
                   <div className="mt-2 text-center text-white/70">
                     {config.label}

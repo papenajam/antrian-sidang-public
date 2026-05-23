@@ -9,9 +9,21 @@ interface NumberTickerProps {
   duration?: number
   suffix?: string
   prefix?: string
+  /**
+   * Jika true, tampilkan dash (-) untuk nilai 0
+   * Default: false (tampilkan 0)
+   */
+  showDashForZero?: boolean
 }
 
-export function NumberTicker({ value, className, duration = 1, suffix, prefix }: NumberTickerProps) {
+export function NumberTicker({ 
+  value, 
+  className, 
+  duration = 1, 
+  suffix, 
+  prefix,
+  showDashForZero = false,
+}: NumberTickerProps) {
   const [displayValue, setDisplayValue] = useState(0)
 
   useEffect(() => {
@@ -32,12 +44,29 @@ export function NumberTicker({ value, className, duration = 1, suffix, prefix }:
     requestAnimationFrame(animate)
   }, [value, duration])
 
-  // Tentukan padding berdasarkan nilai
-  // Angka kecil perlu padding 3 digit (001-099)
-  // Angka >= 100 tidak perlu padding
-  const paddedValue = displayValue >= 100 
+  // Handle zero case - tampilkan dash jika showDashForZero
+  if (showDashForZero && displayValue === 0) {
+    return (
+      <motion.span
+        className={className}
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        —
+      </motion.span>
+    )
+  }
+
+  // Format angka: tidak ada padding berlebihan
+  // Angka 0-9: tampilkan 1 digit
+  // Angka 10-99: tampilkan 2 digit
+  // Angka >= 100: tampilkan sesuai jumlah digit
+  const formattedValue = displayValue < 10 
     ? displayValue.toString() 
-    : displayValue.toString().padStart(3, "0")
+    : displayValue < 100
+    ? displayValue.toString().padStart(2, "0")
+    : displayValue.toString()
 
   return (
     <motion.span
@@ -46,7 +75,7 @@ export function NumberTicker({ value, className, duration = 1, suffix, prefix }:
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      {prefix}{paddedValue}{suffix}
+      {prefix}{formattedValue}{suffix}
     </motion.span>
   )
 }

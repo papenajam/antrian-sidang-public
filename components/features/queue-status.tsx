@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { NumberTicker } from "@/components/magic/number-ticker"
 import { motion } from "framer-motion"
-import { Users, Clock, CheckCircle, ArrowLeftRight, Info, AlertCircle } from "lucide-react"
+import { Users, Clock, CheckCircle, ArrowLeftRight, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { RescheduleDialog } from "./reschedule-dialog"
 import { getTodaySchedule, calculateQueueStatistics } from "@/lib/queue-service"
@@ -20,7 +20,6 @@ interface QueueData {
 }
 
 interface QueueStatusProps {
-  // Props untuk integrasi dengan booking state (dari parent)
   queueNumber?: string
   perkaraId?: number
   currentSlot?: string
@@ -38,8 +37,9 @@ export function QueueStatus({
   const [data, setData] = useState<QueueData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showReschedule, setShowReschedule] = useState(false)
-  // State untuk booking aktif (dari localStorage atau context)
-  const [bookingState, setBookingState] = useState<{
+  const [hasData, setHasData] = useState(false)
+  
+  const [bookingState] = useState<{
     queueNumber: string | null
     perkaraId: number | null
     currentSlot: string | null
@@ -51,10 +51,8 @@ export function QueueStatus({
     tanggal: propTanggal || null,
   })
 
-  // Fungsi fetch data dipisah agar bisa dipanggil ulang dari onSuccess
   const fetchData = async () => {
     try {
-      // Fetch jadwal hari ini
       const scheduleResponse = await getTodaySchedule()
 
       if (scheduleResponse.error) {
@@ -62,17 +60,24 @@ export function QueueStatus({
         return
       }
 
-      // Hitung statistik dari data jadwal
       const statistics = calculateQueueStatistics(
         scheduleResponse.data,
-        [] // TODO: Perlu endpoint untuk fetch semua tiket hari ini
+        []
       )
+
+      // Check if we have real data
+      const hasRealData = statistics.currentNumber > 0 || 
+                         statistics.waitingCount > 0 || 
+                         statistics.processedToday > 0 ||
+                         scheduleResponse.data.length > 0
+
+      setHasData(hasRealData)
 
       setData({
         currentNumber: statistics.currentNumber,
         waitingCount: statistics.waitingCount,
         processedToday: statistics.processedToday,
-        lastUpdated: statistics.lastUpdated,
+        lastUpdated: statistics.lastUpdated || "-",
       })
     } catch (error) {
       toast.error("Gagal memuat status antrian")
@@ -84,23 +89,18 @@ export function QueueStatus({
 
   useEffect(() => {
     fetchData()
-
-    // Refresh data setiap 30 detik
     const interval = setInterval(fetchData, 30000)
     return () => clearInterval(interval)
   }, [])
 
-  // Handler untuk cek status (placeholder)
   const handleCheckStatus = () => {
     if (bookingState.queueNumber) {
       toast.info(`Cek status untuk: ${bookingState.queueNumber}`)
-      // TODO: Navigasi ke halaman cek status atau buka modal
     } else {
-      toast.info("Fitur cek status akan segera tersedia. Silakan masukkan nomor antrian Anda.")
+      toast.info("Fitur cek status akan segera tersedia.")
     }
   }
 
-  // Handler untuk reschedule
   const handleReschedule = () => {
     if (!bookingState.queueNumber || !bookingState.perkaraId || !bookingState.currentSlot || !bookingState.tanggal) {
       toast.warning("Fitur ganti jadwal tersedia setelah Anda melakukan booking")
@@ -109,7 +109,6 @@ export function QueueStatus({
     setShowReschedule(true)
   }
 
-  // Tentukan apakah user punya booking aktif
   const hasActiveBooking = isActive || bookingState.queueNumber !== null
 
   if (isLoading) {
@@ -133,9 +132,11 @@ export function QueueStatus({
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>Status Antrian Saat Ini</span>
-            <span className="text-sm font-normal text-muted-foreground">
-              Update: {data?.lastUpdated}
-            </span>
+            {data?.lastUpdated && data.lastUpdated !== "-" && (
+              <span className="text-sm font-normal text-muted-foreground">
+                Update: {data.lastUpdated}
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -148,12 +149,18 @@ export function QueueStatus({
           >
             <div className="text-sm font-medium opacity-80">Nomor Antrian Sekarang</div>
             <div className="text-6xl font-bold">
-              <NumberTicker value={data?.currentNumber || 0} duration={1.5} />
+              {!hasData && data?.currentNumber === 0 ? (
+                <span>—</span>
+              ) : (
+                <NumberTicker 
+                  value={data?.currentNumber || 0} 
+                  duration={1.5} 
+                  showDashForZero={true}
+                />
+              )}
             </div>
             <div className="mt-2 flex items-center justify-center gap-2 text-sm">
-              <div
-                className="h-3 w-3 rounded-full bg-green-400 motion-safe:animate-pulse"
-              />
+              <div className="h-3 w-3 rounded-full bg-green-400 motion-safe:animate-pulse" />
               Sedang Dipanggil
             </div>
           </motion.div>
@@ -166,7 +173,17 @@ export function QueueStatus({
                   <Users className="h-5 w-5 text-yellow-600" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">{data?.waitingCount}</div>
+                  <div className="text-2xl font-bold">
+                    {!hasData && data?.waitingCount === 0 ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <NumberTicker 
+                        value={data?.waitingCount || 0} 
+                        duration={1.5}
+                        showDashForZero={true}
+                      />
+                    )}
+                  </div>
                   <div className="text-sm text-muted-foreground">Menunggu</div>
                 </div>
               </div>
@@ -177,28 +194,38 @@ export function QueueStatus({
                   <CheckCircle className="h-5 w-5 text-green-600" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold">{data?.processedToday}</div>
+                  <div className="text-2xl font-bold">
+                    {!hasData && data?.processedToday === 0 ? (
+                      <span className="text-muted-foreground">—</span>
+                    ) : (
+                      <NumberTicker 
+                        value={data?.processedToday || 0} 
+                        duration={1.5}
+                        showDashForZero={true}
+                      />
+                    )}
+                  </div>
                   <div className="text-sm text-muted-foreground">Selesai Hari Ini</div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Informasi estimasi waktu */}
-          <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-sm">
-            <Clock className="h-4 w-4 text-muted-foreground" />
-            <span className="text-muted-foreground">
-              Estimasi waktu tunggu: <strong>15-20 menit</strong> per nomor
-            </span>
-          </div>
+          {/* Informasi estimasi waktu - hanya tampil jika ada data */}
+          {hasData && (
+            <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-sm">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground">
+                Estimasi waktu tunggu: <strong>15-20 menit</strong> per nomor
+              </span>
+            </div>
+          )}
 
-          {/* Informasi booking aktif */}
-          {!hasActiveBooking && (
-            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
-              <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
-              <p className="text-sm text-blue-800">
-                Booking antrian untuk melihat jadwal dan mengganti slot? Gunakan wizard booking di bawah.
-              </p>
+          {/* Info jika belum ada data antrian */}
+          {!hasData && (
+            <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+              <Info className="h-4 w-4" />
+              <span>Belum ada data antrian untuk hari ini</span>
             </div>
           )}
 
