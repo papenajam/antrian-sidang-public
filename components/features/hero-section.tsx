@@ -26,7 +26,7 @@ export function HeroSection() {
   const [error, setError] = useState<string | null>(null)
 
   const appName = settings?.app.name ?? "Antrian Sidang"
-  const institutionName = settings?.institution.name ?? "Pengadilan Negeri"
+  const institutionName = settings?.institution.name ?? "Pengadilan Agama Penajam"
   const appDescription = settings?.app.description ?? "Sistem antrian sidang yang modern dan interaktif"
 
   const fetchStats = async () => {

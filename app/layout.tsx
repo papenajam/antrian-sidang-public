@@ -27,14 +27,14 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 
 export const metadata: Metadata = {
   title: {
-    default: "Antrian Sidang - Pengadilan Agama",
+    default: "Antrian Sidang - Pengadilan Agama Penajam",
     template: "%s | Antrian Sidang",
   },
   description: "Sistem antrian sidang pengadilan agama yang modern dan interaktif. Daftar antrian, cek status, dan jadwal sidang dengan mudah.",
   keywords: ["antrian sidang", "pengadilan agama", "jadwal sidang", "sistem antrian", "indonesia"],
-  authors: [{ name: "Pengadilan Agama" }],
+  authors: [{ name: "Pengadilan Agama Penajam" }],
   openGraph: {
-    title: "Antrian Sidang - Pengadilan Agama",
+    title: "Antrian Sidang - Pengadilan Agama Penajam",
     description: "Sistem antrian sidang yang modern dan interaktif",
     type: "website",
     locale: "id_ID",

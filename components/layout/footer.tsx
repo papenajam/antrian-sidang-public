@@ -9,7 +9,7 @@ const CURRENT_YEAR = new Date().getFullYear()
 export function Footer() {
   const { settings } = useAppSettings()
 
-  const institutionName = settings?.institution.name ?? "Pengadilan Negeri"
+  const institutionName = settings?.institution.name ?? "Pengadilan Agama Penajam"
   const institutionAddress = settings?.institution.address ?? "Jl. Pengadilan No. 1, Jakarta"
   const institutionPhone = settings?.institution.phone ?? "(021) 1234567"
   const institutionEmail = settings?.institution.email ?? "info@pengadilan-agama.go.id"

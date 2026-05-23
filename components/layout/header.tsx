@@ -18,7 +18,7 @@ export function Header() {
   const { theme, setTheme } = useTheme()
   const { settings } = useAppSettings()
 
-  const institutionName = settings?.institution.name ?? "Pengadilan Negeri"
+  const institutionName = settings?.institution.name ?? "Pengadilan Agama Penajam"
 
   return (
     <>

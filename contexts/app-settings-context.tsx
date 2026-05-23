@@ -40,8 +40,8 @@ export function AppSettingsProvider({ children }: { children: ReactNode }) {
           description: "Sistem antrian sidang yang modern dan interaktif",
         },
         institution: {
-          name: "Pengadilan Negeri",
-          short_name: "PN",
+          name: "Pengadilan Agama Penajam",
+          short_name: "PAP",
           address: null,
           phone: null,
           email: null,
