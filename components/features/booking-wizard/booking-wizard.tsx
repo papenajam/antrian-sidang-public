@@ -9,6 +9,7 @@ import { StepConfirm } from "./step-confirm"
 import { StepTicket } from "./step-ticket"
 import { ExistingQueueCard } from "./existing-queue-card"
 import { toast } from "sonner"
+import { useBookingModal } from "@/contexts/booking-modal-context"
 import type { SlotInfo, QueueTicket, ValidateResponse, ExistingQueue } from "@/lib/api-types"
 
 type Step = 1 | 2 | 3 | 4 | 'existing-queue' | 'multi-pihak'
@@ -80,6 +81,7 @@ export function BookingWizard() {
   const [bookingData, setBookingData] = useState<BookingData>(INITIAL_BOOKING_DATA)
   const [ticket, setTicket] = useState<(QueueTicket & { slot_time: string }) | null>(null)
   const [existingQueue, setExistingQueue] = useState<ExistingQueue | null>(null)
+  const { setIsOpen } = useBookingModal()
 
   /**
    * Handler ketika validasi berhasil dan tidak ada existing queue.
@@ -152,6 +154,8 @@ export function BookingWizard() {
     toast.success("Booking berhasil!", {
       description: `Nomor antrian Anda: ${ticketData.queue_number}`,
     })
+    // Close modal setelah booking berhasil
+    setIsOpen(false)
   }
 
   /**
@@ -170,6 +174,8 @@ export function BookingWizard() {
     setBookingData(INITIAL_BOOKING_DATA)
     setTicket(null)
     setExistingQueue(null)
+    // Close modal agar user bisa buka lagi via FAB atau HeroSection
+    setIsOpen(false)
   }
 
   /**
