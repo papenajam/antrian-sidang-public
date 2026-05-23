@@ -76,7 +76,7 @@ export function RescheduleDialog({
 
       onSuccess()
       onOpenChange(false)
-    } catch (error) {
+    } catch {
       toast.error("Gagal mengubah jadwal. Slot mungkin sudah penuh.")
     } finally {
       setIsSubmitting(false)

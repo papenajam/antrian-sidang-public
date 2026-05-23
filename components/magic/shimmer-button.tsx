@@ -8,6 +8,8 @@ interface ShimmerButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   shimmerOpacity?: number
   shimmerDuration?: string
   background?: string
+  /** Warna teks tombol. Default "white". Gunakan warna gelap untuk background terang (misal gold). */
+  foreground?: string
 }
 
 export function ShimmerButton({
@@ -16,7 +18,9 @@ export function ShimmerButton({
   shimmerOpacity = 0.2,
   shimmerDuration = "2s",
   background = "var(--primary)",
+  foreground = "white",
   children,
+  style,
   ...props
 }: ShimmerButtonProps) {
   // Konversi opacity (0–1) ke dua karakter hex
@@ -27,11 +31,11 @@ export function ShimmerButton({
   return (
     <button
       className={cn(
-        "group relative z-0 overflow-hidden rounded-lg px-6 py-3 font-semibold text-white",
+        "group relative z-0 overflow-hidden rounded-lg px-6 py-3 font-semibold",
         "transition-all duration-300 hover:scale-105",
         className
       )}
-      style={{ background }}
+      style={{ background, color: foreground, ...style }}
       {...props}
     >
       <span className="relative z-10 flex items-center">{children}</span>

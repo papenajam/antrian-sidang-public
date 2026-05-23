@@ -252,7 +252,7 @@ git commit -m "feat: add booking wizard type definitions"
 ```typescript
 // lib/__tests__/queue-service.test.ts
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { validatePerkara, getAvailableSlots, rescheduleQueue } from '../queue-service'
+import { validatePerkara, getAvailableSlots, rescheduleQueue, bookQueueWizard } from '../queue-service'
 import { api } from '../api'
 
 // Mock api module
@@ -370,6 +370,40 @@ describe('rescheduleQueue', () => {
     expect(result).toEqual(mockResponse)
   })
 })
+
+describe('bookQueueWizard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls POST /public/queue/book with wizard parameters', async () => {
+    const mockResponse = {
+      data: {
+        queue_number: 'A-003',
+        status: 'waiting',
+        slot_time: '09:00',
+        pihak_nama: 'Ahmad',
+        nomor_perkara: '123/Pdt.G/2024/PA.Pps',
+        ruang_sidang: 'Ruang Sidang 1',
+      },
+      message: 'Booking berhasil',
+    }
+    vi.mocked(api.post).mockResolvedValue(mockResponse)
+
+    const result = await bookQueueWizard({
+      perkara_id: 123,
+      nik: '3201234567890001',
+      slot_time: '09:00',
+    })
+
+    expect(api.post).toHaveBeenCalledWith('/public/queue/book', {
+      perkara_id: 123,
+      nik: '3201234567890001',
+      slot_time: '09:00',
+    })
+    expect(result).toEqual(mockResponse)
+  })
+})
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -412,6 +446,16 @@ export async function rescheduleQueue(
   data: import('./api-types').RescheduleRequest
 ): Promise<import('./api-types').RescheduleResponse> {
   return api.put<import('./api-types').RescheduleResponse>('/public/queue/reschedule', data)
+}
+
+/**
+ * Booking antrian untuk wizard (parameter baru: nik + slot_time)
+ * Digunakan oleh BookingWizard, bukan RegistrationForm lama
+ */
+export async function bookQueueWizard(
+  data: import('./api-types').QueueBookWizardRequest
+): Promise<import('./api-types').QueueBookResponse> {
+  return api.post<import('./api-types').QueueBookResponse>('/public/queue/book', data)
 }
 ```
 
@@ -686,7 +730,7 @@ describe('StepValidate', () => {
 Run: `pnpm test components/features/booking-wizard/__tests__/step-validate.test.tsx`
 Expected: FAIL with "Cannot find module"
 
-- [ ] **Step 3: Create StepValidate component**
+- [ ] **Step 3: Create StepValidate component (with multi-pihak & existing queue handling)**
 
 ```tsx
 // components/features/booking-wizard/step-validate.tsx
@@ -698,16 +742,18 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { BlurFade } from "@/components/magic/blur-fade"
-import { Loader2, Search } from "lucide-react"
+import { Loader2, Search, Clock, FileText, ArrowLeftRight, ExternalLink } from "lucide-react"
 import { validatePerkara } from "@/lib/queue-service"
-import type { ValidateResponse } from "@/lib/api-types"
+import type { ValidateResponse, ExistingQueue } from "@/lib/api-types"
 
 interface StepValidateProps {
   onNext: (data: NonNullable<ValidateResponse['data']>) => void
+  onExistingQueue: (queue: ExistingQueue) => void
+  onMultiPihak: (data: NonNullable<ValidateResponse['data']>) => void
   onError: (message: string) => void
 }
 
-export function StepValidate({ onNext, onError }: StepValidateProps) {
+export function StepValidate({ onNext, onExistingQueue, onMultiPihak, onError }: StepValidateProps) {
   const [nomorPerkara, setNomorPerkara] = useState("")
   const [nik, setNik] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -744,7 +790,15 @@ export function StepValidate({ onNext, onError }: StepValidateProps) {
       })
 
       if (response.valid && response.data) {
-        onNext(response.data)
+        // Cek apakah ada existing queue
+        if (response.data.existing_queue) {
+          // Multi-pihak: perkara sudah booking oleh pihak lain
+          // Langsung berikan nomor antrian yang sama (skip langkah 2-3)
+          onMultiPihak(response.data)
+        } else {
+          // Normal flow: lanjut ke pilih slot
+          onNext(response.data)
+        }
       } else {
         onError(response.message || "Validasi gagal")
       }
@@ -820,6 +874,14 @@ export function StepValidate({ onNext, onError }: StepValidateProps) {
               )}
             </Button>
           </form>
+
+          {/* Info box untuk offline registration */}
+          <div className="mt-4 flex items-start gap-3 rounded-lg bg-muted p-4 text-sm">
+            <ExternalLink className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+            <p className="text-muted-foreground">
+              Jika NIK tidak terdaftar, Anda akan diarahkan untuk mendaftar secara offline di pengadilan.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </BlurFade>
@@ -837,6 +899,188 @@ Expected: PASS
 ```bash
 git add components/features/booking-wizard/step-validate.tsx components/features/booking-wizard/__tests__/step-validate.test.tsx
 git commit -m "feat: add StepValidate component for perkara + NIK validation"
+```
+
+---
+
+## Task 5b: Create ExistingQueueCard Component
+
+**Files:**
+- Create: `components/features/booking-wizard/existing-queue-card.tsx`
+- Create: `components/features/booking-wizard/__tests__/existing-queue-card.test.tsx`
+
+- [ ] **Step 1: Write failing tests**
+
+```typescript
+// components/features/booking-wizard/__tests__/existing-queue-card.test.tsx
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { ExistingQueueCard } from '../existing-queue-card'
+import type { ExistingQueue } from '@/lib/api-types'
+
+describe('ExistingQueueCard', () => {
+  const mockQueue: ExistingQueue = {
+    queue_number: 'A-003',
+    slot_time: '09:00',
+    status: 'waiting',
+  }
+
+  const defaultProps = {
+    queue: mockQueue,
+    onViewStatus: vi.fn(),
+    onReschedule: vi.fn(),
+    onBookAgain: vi.fn(),
+  }
+
+  it('renders existing queue info', () => {
+    render(<ExistingQueueCard {...defaultProps} />)
+    expect(screen.getByText('A-003')).toBeInTheDocument()
+    expect(screen.getByText(/09:00/)).toBeInTheDocument()
+    expect(screen.getByText(/menunggu/i)).toBeInTheDocument()
+  })
+
+  it('renders info message about shared queue', () => {
+    render(<ExistingQueueCard {...defaultProps} />)
+    expect(screen.getByText(/sudah memiliki booking/i)).toBeInTheDocument()
+  })
+
+  it('calls onViewStatus when button clicked', () => {
+    const onViewStatus = vi.fn()
+    render(<ExistingQueueCard {...defaultProps} onViewStatus={onViewStatus} />)
+    fireEvent.click(screen.getByRole('button', { name: /lihat status/i }))
+    expect(onViewStatus).toHaveBeenCalled()
+  })
+
+  it('calls onReschedule when button clicked', () => {
+    const onReschedule = vi.fn()
+    render(<ExistingQueueCard {...defaultProps} onReschedule={onReschedule} />)
+    fireEvent.click(screen.getByRole('button', { name: /ganti jadwal/i }))
+    expect(onReschedule).toHaveBeenCalled()
+  })
+
+  it('calls onBookAgain when button clicked', () => {
+    const onBookAgain = vi.fn()
+    render(<ExistingQueueCard {...defaultProps} onBookAgain={onBookAgain} />)
+    fireEvent.click(screen.getByRole('button', { name: /booking baru/i }))
+    expect(onBookAgain).toHaveBeenCalled()
+  })
+})
+```
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `pnpm test components/features/booking-wizard/__tests__/existing-queue-card.test.tsx`
+Expected: FAIL with "Cannot find module"
+
+- [ ] **Step 3: Create ExistingQueueCard component**
+
+```tsx
+// components/features/booking-wizard/existing-queue-card.tsx
+"use client"
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { BlurFade } from "@/components/magic/blur-fade"
+import { Clock, FileText, Search, ArrowLeftRight, Plus, Info } from "lucide-react"
+import type { ExistingQueue } from "@/lib/api-types"
+
+interface ExistingQueueCardProps {
+  queue: ExistingQueue
+  onViewStatus: () => void
+  onReschedule: () => void
+  onBookAgain: () => void
+}
+
+export function ExistingQueueCard({
+  queue,
+  onViewStatus,
+  onReschedule,
+  onBookAgain,
+}: ExistingQueueCardProps) {
+  const endHour = parseInt(queue.slot_time.split(':')[0], 10) + 1
+  const endTime = `${endHour.toString().padStart(2, '0')}:00`
+
+  const statusLabels: Record<string, string> = {
+    waiting: 'Menunggu',
+    in_service: 'Sedang Dilayani',
+    completed: 'Selesai',
+    cancelled: 'Dibatalkan',
+    skipped: 'Dilewati',
+    no_show: 'Tidak Hadir',
+  }
+
+  return (
+    <BlurFade>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Info className="h-5 w-5 text-primary" />
+            Booking Sudah Ada
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Info message */}
+          <div className="flex items-start gap-3 rounded-lg bg-blue-50 p-4 text-blue-800">
+            <Info className="mt-0.5 h-5 w-5 flex-shrink-0" />
+            <p className="text-sm">
+              Perkara ini sudah memiliki booking. Anda akan mendapatkan nomor antrian yang sama.
+            </p>
+          </div>
+
+          {/* Queue info */}
+          <div className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Nomor Antrian</span>
+              <span className="text-2xl font-bold text-primary">{queue.queue_number}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="text-sm text-muted-foreground">Jam Sidang</div>
+                <div className="font-medium">{queue.slot_time} - {endTime}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="text-sm text-muted-foreground">Status</div>
+                <div className="font-medium">{statusLabels[queue.status] || queue.status}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button onClick={onViewStatus} className="flex-1">
+              <Search className="mr-2 h-4 w-4" />
+              Lihat Status
+            </Button>
+            <Button variant="outline" onClick={onReschedule} className="flex-1">
+              <ArrowLeftRight className="mr-2 h-4 w-4" />
+              Ganti Jadwal
+            </Button>
+            <Button variant="outline" onClick={onBookAgain} className="flex-1">
+              <Plus className="mr-2 h-4 w-4" />
+              Booking Baru
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </BlurFade>
+  )
+}
+```
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `pnpm test components/features/booking-wizard/__tests__/existing-queue-card.test.tsx`
+Expected: PASS
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add components/features/booking-wizard/existing-queue-card.tsx components/features/booking-wizard/__tests__/existing-queue-card.test.tsx
+git commit -m "feat: add ExistingQueueCard for existing booking display"
 ```
 
 ---
@@ -1103,7 +1347,7 @@ import { StepConfirm } from '../step-confirm'
 import * as queueService from '@/lib/queue-service'
 
 vi.mock('@/lib/queue-service', () => ({
-  bookQueue: vi.fn(),
+  bookQueueWizard: vi.fn(),
 }))
 
 describe('StepConfirm', () => {
@@ -1146,7 +1390,7 @@ describe('StepConfirm', () => {
       },
       message: 'Booking berhasil',
     }
-    vi.mocked(queueService.bookQueue).mockResolvedValue(mockResponse as any)
+    vi.mocked(queueService.bookQueueWizard).mockResolvedValue(mockResponse as any)
 
     const onNext = vi.fn()
     render(<StepConfirm {...defaultProps} onNext={onNext} />)
@@ -1154,7 +1398,7 @@ describe('StepConfirm', () => {
     fireEvent.click(screen.getByRole('button', { name: /konfirmasi booking/i }))
 
     await waitFor(() => {
-      expect(queueService.bookQueue).toHaveBeenCalledWith({
+      expect(queueService.bookQueueWizard).toHaveBeenCalledWith({
         perkara_id: 123,
         nik: '3201234567890001',
         slot_time: '09:00',
@@ -1189,7 +1433,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { CheckCircle, ArrowLeft, Loader2, AlertTriangle } from "lucide-react"
-import { bookQueue } from "@/lib/queue-service"
+import { bookQueueWizard } from "@/lib/queue-service"
 import type { SlotInfo, QueueTicket } from "@/lib/api-types"
 
 interface StepConfirmProps {
@@ -1234,7 +1478,7 @@ export function StepConfirm({
     setIsSubmitting(true)
 
     try {
-      const response = await bookQueue({
+      const response = await bookQueueWizard({
         perkara_id: perkaraId,
         nik,
         slot_time: slot.time,
@@ -1551,7 +1795,7 @@ describe('BookingWizard', () => {
 Run: `pnpm test components/features/booking-wizard/__tests__/booking-wizard.test.tsx`
 Expected: FAIL with "Cannot find module"
 
-- [ ] **Step 3: Create BookingWizard container**
+- [ ] **Step 3: Create BookingWizard container (with multi-pihak & existing queue handling)**
 
 ```tsx
 // components/features/booking-wizard/booking-wizard.tsx
@@ -1563,10 +1807,11 @@ import { StepValidate } from "./step-validate"
 import { StepSelectSlot } from "./step-select-slot"
 import { StepConfirm } from "./step-confirm"
 import { StepTicket } from "./step-ticket"
+import { ExistingQueueCard } from "./existing-queue-card"
 import { toast } from "sonner"
-import type { SlotInfo, QueueTicket, ValidateResponse } from "@/lib/api-types"
+import type { SlotInfo, QueueTicket, ValidateResponse, ExistingQueue } from "@/lib/api-types"
 
-type Step = 1 | 2 | 3 | 4
+type Step = 1 | 2 | 3 | 4 | 'existing-queue' | 'multi-pihak'
 
 interface BookingData {
   perkaraId: number
@@ -1590,6 +1835,7 @@ export function BookingWizard() {
     selectedSlot: null,
   })
   const [ticket, setTicket] = useState<(QueueTicket & { slot_time: string }) | null>(null)
+  const [existingQueue, setExistingQueue] = useState<ExistingQueue | null>(null)
 
   const handleValidateNext = (data: NonNullable<ValidateResponse['data']>) => {
     setBookingData((prev) => ({
@@ -1601,6 +1847,39 @@ export function BookingWizard() {
       ruangan: data.jadwal.ruangan,
     }))
     setCurrentStep(2)
+  }
+
+  const handleExistingQueue = (queue: ExistingQueue) => {
+    setExistingQueue(queue)
+    setCurrentStep('existing-queue')
+  }
+
+  const handleMultiPihak = (data: NonNullable<ValidateResponse['data']>) => {
+    // Multi-pihak: perkara sudah booking oleh pihak lain
+    // Langsung berikan nomor antrian yang sama (skip langkah 2-3)
+    setBookingData((prev) => ({
+      ...prev,
+      perkaraId: data.perkara_id,
+      namaPihak: data.pihak_nama,
+      nomorPerkara: data.jadwal.nomor_perkara || prev.nomorPerkara,
+      tanggal: data.jadwal.tanggal,
+      ruangan: data.jadwal.ruangan,
+    }))
+
+    if (data.existing_queue) {
+      setTicket({
+        queue_number: data.existing_queue.queue_number,
+        status: data.existing_queue.status,
+        slot_time: data.existing_queue.slot_time,
+        pihak_nama: data.pihak_nama,
+        nomor_perkara: data.jadwal.nomor_perkara || "",
+        ruang_sidang: data.jadwal.ruangan,
+      })
+      setCurrentStep(4)
+      toast.info("Perkara ini sudah memiliki booking", {
+        description: `Anda mendapatkan nomor antrian yang sama: ${data.existing_queue.queue_number}`,
+      })
+    }
   }
 
   const handleValidateError = (message: string) => {
@@ -1638,6 +1917,7 @@ export function BookingWizard() {
       selectedSlot: null,
     })
     setTicket(null)
+    setExistingQueue(null)
   }
 
   const handleCheckStatus = () => {
@@ -1645,21 +1925,27 @@ export function BookingWizard() {
     toast.info("Fitur cek status akan segera tersedia")
   }
 
+  const handleReschedule = () => {
+    // Redirect ke langkah 2 untuk ganti jadwal
+    setCurrentStep(2)
+    setExistingQueue(null)
+  }
+
   return (
     <div className="mx-auto max-w-2xl">
       {/* Progress Bar */}
-      <div className="mb-8" role="progressbar" aria-valuenow={currentStep} aria-valuemin={1} aria-valuemax={4}>
+      <div className="mb-8" role="progressbar" aria-valuenow={currentStep === 1 ? 1 : currentStep === 2 ? 2 : currentStep === 3 ? 3 : 4} aria-valuemin={1} aria-valuemax={4}>
         <div className="flex items-center justify-between">
           {[1, 2, 3, 4].map((step) => (
             <div key={step} className="flex items-center">
               <div
                 className={`flex h-10 w-10 items-center justify-center rounded-full border-2 ${
-                  step <= currentStep
+                  step <= (currentStep === 'existing-queue' || currentStep === 'multi-pihak' ? 1 : currentStep)
                     ? "border-primary bg-primary text-primary-foreground"
                     : "border-muted-foreground/30 text-muted-foreground"
                 }`}
               >
-                {step < currentStep ? (
+                {step < (currentStep === 'existing-queue' || currentStep === 'multi-pihak' ? 1 : currentStep) ? (
                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -1670,7 +1956,7 @@ export function BookingWizard() {
               {step < 4 && (
                 <div
                   className={`h-1 w-16 sm:w-24 ${
-                    step < currentStep ? "bg-primary" : "bg-muted-foreground/30"
+                    step < (currentStep === 'existing-queue' || currentStep === 'multi-pihak' ? 1 : currentStep) ? "bg-primary" : "bg-muted-foreground/30"
                   }`}
                 />
               )}
@@ -1689,7 +1975,18 @@ export function BookingWizard() {
       {currentStep === 1 && (
         <StepValidate
           onNext={handleValidateNext}
+          onExistingQueue={handleExistingQueue}
+          onMultiPihak={handleMultiPihak}
           onError={handleValidateError}
+        />
+      )}
+
+      {currentStep === 'existing-queue' && existingQueue && (
+        <ExistingQueueCard
+          queue={existingQueue}
+          onViewStatus={handleCheckStatus}
+          onReschedule={handleReschedule}
+          onBookAgain={handleBookAgain}
         />
       )}
 
@@ -1699,6 +1996,7 @@ export function BookingWizard() {
           tanggal={bookingData.tanggal}
           onNext={handleSlotNext}
           onBack={() => setCurrentStep(1)}
+          currentSlot={existingQueue?.slot_time}
         />
       )}
 
@@ -2160,7 +2458,7 @@ import * as queueService from '@/lib/queue-service'
 vi.mock('@/lib/queue-service', () => ({
   validatePerkara: vi.fn(),
   getAvailableSlots: vi.fn(),
-  bookQueue: vi.fn(),
+  bookQueueWizard: vi.fn(),
 }))
 
 describe('BookingWizard Integration', () => {
@@ -2196,7 +2494,7 @@ describe('BookingWizard Integration', () => {
     })
 
     // Mock book
-    vi.mocked(queueService.bookQueue).mockResolvedValue({
+    vi.mocked(queueService.bookQueueWizard).mockResolvedValue({
       data: {
         queue_number: 'A-003',
         status: 'waiting',
@@ -2374,17 +2672,19 @@ git commit -m "docs: update API integration guide with new endpoints"
 | Validasi NIK | ✅ Task 3 (validatePerkara), Task 5 |
 | Slot Waktu 09:00-16:00 | ✅ Task 3 (getAvailableSlots), Task 6 |
 | Kuota 6 per slot | ✅ Task 4 (SlotCard displays quota) |
-| Multi-pihak (shared queue) | ✅ Handled by backend, Task 5 handles existing_queue |
+| Multi-pihak (shared queue) | ✅ Task 5 (StepValidate) + Task 5b (ExistingQueueCard) + Task 9 (BookingWizard) |
 | Card Slot with quota | ✅ Task 4 (SlotCard) |
 | Disabled when full | ✅ Task 4 (SlotCard disabled prop) |
+| Existing Queue UI | ✅ Task 5b (ExistingQueueCard) |
 | Booking → Tiket | ✅ Task 7 (StepConfirm), Task 8 (StepTicket) |
 | Cek Status | ✅ Task 8 (StepTicket buttons) |
 | Ganti Jadwal (Reschedule) | ✅ Task 10 (RescheduleDialog) |
 | Atomic Booking | ✅ Handled by backend |
+| bookQueueWizard function | ✅ Task 3 (bookQueueWizard) |
 
 ### Placeholder Scan
 
-- ✅ No TBD/TODO in implementation code
+- ✅ No TBD/TODO in implementation code (except handleCheckStatus TODO which is acceptable)
 - ✅ All code blocks are complete
 - ✅ All file paths are exact
 - ✅ All test code is complete
@@ -2394,7 +2694,9 @@ git commit -m "docs: update API integration guide with new endpoints"
 - ✅ ValidateRequest/Response used consistently
 - ✅ SlotInfo used consistently
 - ✅ RescheduleRequest/Response used consistently
+- ✅ ExistingQueue type used in StepValidate and ExistingQueueCard
 - ✅ Function signatures match between service and components
+- ✅ bookQueueWizard used instead of old bookQueue in wizard flow
 
 ---
 
