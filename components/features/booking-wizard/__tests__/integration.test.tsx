@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BookingWizard } from '../booking-wizard'
+import { BookingModalProvider } from '@/contexts/booking-modal-context'
 import * as queueService from '@/lib/queue-service'
 
 vi.mock('@/lib/queue-service', () => ({
@@ -83,7 +84,7 @@ describe('BookingWizard Integration', () => {
       message: 'Berhasil',
     })
 
-    render(<BookingWizard />)
+    render(<BookingModalProvider><BookingWizard /></BookingModalProvider>)
 
     // Step 1: Validasi — isi form dan submit
     const nomorPerkaraInput = screen.getByLabelText(/nomor perkara/i)

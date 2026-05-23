@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BookingWizard } from '../booking-wizard'
+import { BookingModalProvider } from '@/contexts/booking-modal-context'
 import * as queueService from '@/lib/queue-service'
 
 vi.mock('@/lib/queue-service', () => ({
@@ -24,17 +25,17 @@ describe('BookingWizard', () => {
   })
 
   it('renders step 1 by default', () => {
-    render(<BookingWizard />)
+    render(<BookingModalProvider><BookingWizard /></BookingModalProvider>)
     expect(screen.getByText(/validasi data perkara/i)).toBeInTheDocument()
   })
 
   it('renders progress bar', () => {
-    render(<BookingWizard />)
+    render(<BookingModalProvider><BookingWizard /></BookingModalProvider>)
     expect(screen.getByRole('progressbar')).toBeInTheDocument()
   })
 
   it('renders all 4 step labels in progress bar', () => {
-    render(<BookingWizard />)
+    render(<BookingModalProvider><BookingWizard /></BookingModalProvider>)
     // Gunakan queryAllByText karena "Validasi" muncul di progress bar dan StepValidate
     const validasiElements = screen.queryAllByText(/validasi/i)
     expect(validasiElements.length).toBeGreaterThanOrEqual(1)
@@ -63,7 +64,7 @@ describe('BookingWizard', () => {
     }
     vi.mocked(queueService.validatePerkara).mockResolvedValue(mockResponse)
 
-    render(<BookingWizard />)
+    render(<BookingModalProvider><BookingWizard /></BookingModalProvider>)
 
     const user = userEvent.setup()
     await user.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
@@ -99,7 +100,7 @@ describe('BookingWizard', () => {
     }
     vi.mocked(queueService.validatePerkara).mockResolvedValue(mockResponse)
 
-    render(<BookingWizard />)
+    render(<BookingModalProvider><BookingWizard /></BookingModalProvider>)
 
     const user = userEvent.setup()
     await user.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
