@@ -100,7 +100,7 @@ describe('BookingWizard Integration', () => {
     expect(nomorPerkaraInput).toHaveValue('123/Pdt.G/2024/PA.Pps')
     expect(nikInput).toHaveValue('3201234567890001')
 
-    fireEvent.click(screen.getByRole('button', { name: /cek jadwal/i }))
+    fireEvent.click(screen.getByRole('button', { name: /anjutkan/i }))
 
     // Step 2: Pilih slot
     await waitFor(() => {

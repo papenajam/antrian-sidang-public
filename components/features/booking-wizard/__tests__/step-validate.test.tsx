@@ -28,12 +28,12 @@ describe('StepValidate', () => {
 
   it('renders submit button', () => {
     render(<StepValidate {...defaultProps} />)
-    expect(screen.getByRole('button', { name: /cek jadwal/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /anjutkan/i })).toBeInTheDocument()
   })
 
   it('shows validation error when fields are empty', async () => {
     render(<StepValidate {...defaultProps} />)
-    fireEvent.click(screen.getByRole('button', { name: /cek jadwal/i }))
+    fireEvent.click(screen.getByRole('button', { name: /anjutkan/i }))
 
     await waitFor(() => {
       expect(screen.getByText(/nomor perkara wajib diisi/i)).toBeInTheDocument()
@@ -58,7 +58,7 @@ describe('StepValidate', () => {
 
     await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await userEvent.type(screen.getByLabelText(/nik/i), '3201234567890001')
-    fireEvent.click(screen.getByRole('button', { name: /cek jadwal/i }))
+    fireEvent.click(screen.getByRole('button', { name: /anjutkan/i }))
 
     await waitFor(() => {
       expect(queueService.validatePerkara).toHaveBeenCalledWith({
@@ -81,7 +81,7 @@ describe('StepValidate', () => {
 
     await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await userEvent.type(screen.getByLabelText(/nik/i), '0000000000000000')
-    fireEvent.click(screen.getByRole('button', { name: /cek jadwal/i }))
+    fireEvent.click(screen.getByRole('button', { name: /anjutkan/i }))
 
     await waitFor(() => {
       expect(onError).toHaveBeenCalledWith('NIK tidak terdaftar')
@@ -110,7 +110,7 @@ describe('StepValidate', () => {
 
     await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await userEvent.type(screen.getByLabelText(/nik/i), '3201234567890001')
-    fireEvent.click(screen.getByRole('button', { name: /cek jadwal/i }))
+    fireEvent.click(screen.getByRole('button', { name: /anjutkan/i }))
 
     await waitFor(() => {
       expect(onMultiPihak).toHaveBeenCalledWith(mockResponse.data)

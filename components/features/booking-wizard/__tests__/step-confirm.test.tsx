@@ -2,9 +2,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { StepConfirm } from '../step-confirm'
 import * as queueService from '@/lib/queue-service'
+import type { QueueTicket } from '@/lib/api-types'
+
+interface TestMockResponse {
+  data: QueueTicket
+  message: string
+}
 
 vi.mock('@/lib/queue-service', () => ({
   bookQueueWizard: vi.fn(),
+  getAvailableSlots: vi.fn(),
 }))
 
 describe('StepConfirm', () => {
@@ -30,7 +37,7 @@ describe('StepConfirm', () => {
 
     expect(screen.getByText('123/Pdt.G/2024/PA.Pps')).toBeInTheDocument()
     expect(screen.getByText('Ahmad bin Ahmad')).toBeInTheDocument()
-    expect(screen.getByText('09:00 - 10:00')).toBeInTheDocument()
+    expect(screen.getByText(/09:00.*10:00/)).toBeInTheDocument()
     expect(screen.getByText('Ruang Sidang 1')).toBeInTheDocument()
   })
 
@@ -40,15 +47,17 @@ describe('StepConfirm', () => {
   })
 
   it('calls bookQueue on confirm', async () => {
-    const mockResponse = {
+    const mockResponse: TestMockResponse = {
       data: {
         queue_number: 'A-003',
         status: 'waiting',
-        slot_time: '09:00',
+        pihak_nama: 'Ahmad bin Ahmad',
+        nomor_perkara: '123/Pdt.G/2024/PA.Pps',
+        ruang_sidang: 'Ruang Sidang 1',
       },
       message: 'Booking berhasil',
     }
-    vi.mocked(queueService.bookQueueWizard).mockResolvedValue(mockResponse as any)
+    vi.mocked(queueService.bookQueueWizard).mockResolvedValue(mockResponse)
 
     const onNext = vi.fn()
     render(<StepConfirm {...defaultProps} onNext={onNext} />)

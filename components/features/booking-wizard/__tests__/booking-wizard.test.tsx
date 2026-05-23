@@ -69,7 +69,7 @@ describe('BookingWizard', () => {
     const user = userEvent.setup()
     await user.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await user.type(screen.getByLabelText(/nik/i), '3201234567890001')
-    await user.click(screen.getByRole('button', { name: /cek jadwal/i }))
+    await user.click(screen.getByRole('button', { name: /anjutkan/i }))
 
     await waitFor(() => {
       expect(screen.getByText(/pilih jam sidang/i)).toBeInTheDocument()
@@ -105,7 +105,7 @@ describe('BookingWizard', () => {
     const user = userEvent.setup()
     await user.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await user.type(screen.getByLabelText(/nik/i), '3201234567890001')
-    await user.click(screen.getByRole('button', { name: /cek jadwal/i }))
+    await user.click(screen.getByRole('button', { name: /anjutkan/i }))
 
     await waitFor(() => {
       expect(screen.getByText('A-003')).toBeInTheDocument()

@@ -11,6 +11,7 @@ describe('StepTicket', () => {
       pihak_nama: 'Ahmad bin Ahmad',
       nomor_perkara: '123/Pdt.G/2024/PA.Pps',
       ruang_sidang: 'Ruang Sidang 1',
+      tanggal: '2026-05-30',
     },
     onCheckStatus: vi.fn(),
     onBookAgain: vi.fn(),
