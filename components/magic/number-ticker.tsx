@@ -7,14 +7,15 @@ interface NumberTickerProps {
   value: number
   className?: string
   duration?: number
+  suffix?: string
+  prefix?: string
 }
 
-export function NumberTicker({ value, className, duration = 1 }: NumberTickerProps) {
+export function NumberTicker({ value, className, duration = 1, suffix, prefix }: NumberTickerProps) {
   const [displayValue, setDisplayValue] = useState(0)
 
   useEffect(() => {
     const startTime = Date.now()
-    const endTime = startTime + duration * 1000
 
     const animate = () => {
       const now = Date.now()
@@ -31,6 +32,13 @@ export function NumberTicker({ value, className, duration = 1 }: NumberTickerPro
     requestAnimationFrame(animate)
   }, [value, duration])
 
+  // Tentukan padding berdasarkan nilai
+  // Angka kecil perlu padding 3 digit (001-099)
+  // Angka >= 100 tidak perlu padding
+  const paddedValue = displayValue >= 100 
+    ? displayValue.toString() 
+    : displayValue.toString().padStart(3, "0")
+
   return (
     <motion.span
       className={className}
@@ -38,7 +46,7 @@ export function NumberTicker({ value, className, duration = 1 }: NumberTickerPro
       animate={{ scale: 1, opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      {displayValue.toString().padStart(3, "0")}
+      {prefix}{paddedValue}{suffix}
     </motion.span>
   )
 }

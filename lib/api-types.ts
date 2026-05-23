@@ -19,14 +19,19 @@ export type QueueStatus =
   | 'skipped'
   | 'no_show';
 
-// Schedule types dari SIPP
+// Schedule types dari SIPP (sesuai response API)
 export interface JadwalSidang {
+  id: number;
   perkara_id: number;
-  nomor_perkara: string;
-  pihak_nama: string;
   ruangan: string;
-  waktu: string;
+  waktu: string; // Tanggal dan waktu sidang (datetime string)
+  jam_sidang: string | null;
   agenda: string;
+  perkara?: {
+    nomor_perkara: string;
+    para_pihak: string | null;
+    jenis_perkara_nama: string;
+  };
 }
 
 // App Settings types

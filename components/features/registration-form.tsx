@@ -15,7 +15,18 @@ import { motion } from "framer-motion"
 import { CheckCircle, Loader2 } from "lucide-react"
 import { bookQueue, getTodaySchedule } from "@/lib/queue-service"
 import type { JadwalSidang } from "@/lib/api-types"
+import { ZodError } from "zod"
 import { ApiError } from "@/lib/api"
+
+/**
+ * Helper untuk extract error message dari Zod validation error
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof ZodError) {
+    return error.issues[0]?.message ?? String(error)
+  }
+  return String(error)
+}
 
 const formSchema = z.object({
   perkaraId: z.number().min(1, { message: "Pilih jadwal sidang" }),
@@ -23,7 +34,7 @@ const formSchema = z.object({
   nomorTelepon: z.string().max(30),
 })
 
-type FormData = z.infer<typeof formSchema>
+// Form schema type is defined via z.infer<typeof formSchema> inline in the component
 
 interface JadwalOption {
   perkaraId: number
@@ -52,11 +63,19 @@ export function RegistrationForm() {
           toast.error(response.error)
           setJadwalOptions([])
         } else {
+          // Helper untuk extract nama pihak dari HTML para_pihak
+          const extractPartyName = (paraPihak: string | null | undefined): string => {
+            if (!paraPihak) return "—"
+            const cleanText = paraPihak.replace(/<[^>]*>/g, " ").trim()
+            const firstParty = cleanText.split("  ")[0] || cleanText
+            return firstParty || "—"
+          }
+
           // Transform API response ke dropdown options
           const options: JadwalOption[] = response.data.map(
             (jadwal: JadwalSidang) => ({
               perkaraId: jadwal.perkara_id,
-              label: `${jadwal.nomor_perkara} - ${jadwal.pihak_nama} (${jadwal.ruangan}, ${jadwal.waktu})`,
+              label: `${jadwal.perkara?.nomor_perkara || "—"} - ${extractPartyName(jadwal.perkara?.para_pihak)} (${jadwal.ruangan}, ${jadwal.waktu})`,
             })
           )
           setJadwalOptions(options)
@@ -244,7 +263,7 @@ export function RegistrationForm() {
                   </Combobox>
                   {field.state.meta.errors.length > 0 && (
                     <p className="text-sm text-destructive" role="alert">
-                      {field.state.meta.errors.map((e) => (e as any).message ?? String(e)).join(", ")}
+                      {field.state.meta.errors.map((e: unknown) => getErrorMessage(e)).join(", ")}
                     </p>
                   )}
                 </div>
@@ -266,7 +285,7 @@ export function RegistrationForm() {
                   />
                   {field.state.meta.errors.length > 0 && (
                     <p className="text-sm text-destructive" role="alert">
-                      {field.state.meta.errors.map((e) => (e as any).message ?? String(e)).join(", ")}
+                      {field.state.meta.errors.map((e: unknown) => getErrorMessage(e)).join(", ")}
                     </p>
                   )}
                 </div>
@@ -288,7 +307,7 @@ export function RegistrationForm() {
                   />
                   {field.state.meta.errors.length > 0 && (
                     <p className="text-sm text-destructive" role="alert">
-                      {field.state.meta.errors.map((e) => (e as any).message ?? String(e)).join(", ")}
+                      {field.state.meta.errors.map((e: unknown) => getErrorMessage(e)).join(", ")}
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground">

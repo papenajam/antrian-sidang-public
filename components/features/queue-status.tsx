@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { NumberTicker } from "@/components/magic/number-ticker"
 import { motion } from "framer-motion"
-import { Users, Clock, CheckCircle, ArrowLeftRight } from "lucide-react"
+import { Users, Clock, CheckCircle, ArrowLeftRight, Info, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { RescheduleDialog } from "./reschedule-dialog"
 import { getTodaySchedule, calculateQueueStatistics } from "@/lib/queue-service"
@@ -19,10 +19,37 @@ interface QueueData {
   lastUpdated: string
 }
 
-export function QueueStatus() {
+interface QueueStatusProps {
+  // Props untuk integrasi dengan booking state (dari parent)
+  queueNumber?: string
+  perkaraId?: number
+  currentSlot?: string
+  tanggal?: string
+  isActive?: boolean
+}
+
+export function QueueStatus({
+  queueNumber: propQueueNumber,
+  perkaraId: propPerkaraId,
+  currentSlot: propCurrentSlot,
+  tanggal: propTanggal,
+  isActive = false,
+}: QueueStatusProps) {
   const [data, setData] = useState<QueueData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showReschedule, setShowReschedule] = useState(false)
+  // State untuk booking aktif (dari localStorage atau context)
+  const [bookingState, setBookingState] = useState<{
+    queueNumber: string | null
+    perkaraId: number | null
+    currentSlot: string | null
+    tanggal: string | null
+  }>({
+    queueNumber: propQueueNumber || null,
+    perkaraId: propPerkaraId || null,
+    currentSlot: propCurrentSlot || null,
+    tanggal: propTanggal || null,
+  })
 
   // Fungsi fetch data dipisah agar bisa dipanggil ulang dari onSuccess
   const fetchData = async () => {
@@ -36,8 +63,6 @@ export function QueueStatus() {
       }
 
       // Hitung statistik dari data jadwal
-      // Karena API tidak mengembalikan data tiket secara langsung,
-      // kita gunakan data jadwal sebagai acuan
       const statistics = calculateQueueStatistics(
         scheduleResponse.data,
         [] // TODO: Perlu endpoint untuk fetch semua tiket hari ini
@@ -64,6 +89,28 @@ export function QueueStatus() {
     const interval = setInterval(fetchData, 30000)
     return () => clearInterval(interval)
   }, [])
+
+  // Handler untuk cek status (placeholder)
+  const handleCheckStatus = () => {
+    if (bookingState.queueNumber) {
+      toast.info(`Cek status untuk: ${bookingState.queueNumber}`)
+      // TODO: Navigasi ke halaman cek status atau buka modal
+    } else {
+      toast.info("Fitur cek status akan segera tersedia. Silakan masukkan nomor antrian Anda.")
+    }
+  }
+
+  // Handler untuk reschedule
+  const handleReschedule = () => {
+    if (!bookingState.queueNumber || !bookingState.perkaraId || !bookingState.currentSlot || !bookingState.tanggal) {
+      toast.warning("Fitur ganti jadwal tersedia setelah Anda melakukan booking")
+      return
+    }
+    setShowReschedule(true)
+  }
+
+  // Tentukan apakah user punya booking aktif
+  const hasActiveBooking = isActive || bookingState.queueNumber !== null
 
   if (isLoading) {
     return (
@@ -145,12 +192,32 @@ export function QueueStatus() {
             </span>
           </div>
 
-          {/* Tombol ganti jadwal */}
-          <div className="flex justify-center">
+          {/* Informasi booking aktif */}
+          {!hasActiveBooking && (
+            <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600" />
+              <p className="text-sm text-blue-800">
+                Booking antrian untuk melihat jadwal dan mengganti slot? Gunakan wizard booking di bawah.
+              </p>
+            </div>
+          )}
+
+          {/* Tombol aksi */}
+          <div className="flex justify-center gap-3">
             <Button
               variant="outline"
-              onClick={() => setShowReschedule(true)}
-              className="mt-4"
+              onClick={handleCheckStatus}
+              className="flex-1"
+            >
+              <Info className="mr-2 h-4 w-4" />
+              Cek Status
+            </Button>
+            <Button
+              variant={hasActiveBooking ? "outline" : "ghost"}
+              onClick={handleReschedule}
+              disabled={!hasActiveBooking}
+              className="flex-1"
+              title={!hasActiveBooking ? "Fitur ganti jadwal tersedia setelah booking" : ""}
             >
               <ArrowLeftRight className="mr-2 h-4 w-4" />
               Ganti Jadwal
@@ -160,17 +227,20 @@ export function QueueStatus() {
       </Card>
 
       {/* Dialog ganti jadwal */}
-      <RescheduleDialog
-        open={showReschedule}
-        onOpenChange={setShowReschedule}
-        queueNumber="A-003" // TODO: Ambil dari state booking
-        perkaraId={123} // TODO: Ambil dari state booking
-        currentSlot="09:00" // TODO: Ambil dari state booking
-        tanggal={new Date().toISOString().split('T')[0]}
-        onSuccess={() => {
-          fetchData()
-        }}
-      />
+      {bookingState.queueNumber && bookingState.perkaraId && bookingState.currentSlot && bookingState.tanggal && (
+        <RescheduleDialog
+          open={showReschedule}
+          onOpenChange={setShowReschedule}
+          queueNumber={bookingState.queueNumber}
+          perkaraId={bookingState.perkaraId}
+          currentSlot={bookingState.currentSlot}
+          tanggal={bookingState.tanggal}
+          onSuccess={() => {
+            fetchData()
+            toast.success("Jadwal berhasil diubah!")
+          }}
+        />
+      )}
     </BlurFade>
   )
 }

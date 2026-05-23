@@ -69,7 +69,7 @@ function mapValidationToBooking(data: NonNullable<ValidateResponse['data']>, pre
     ...prev,
     perkaraId: data.perkara_id,
     namaPihak: data.pihak_nama,
-    nomorPerkara: data.jadwal.nomor_perkara || prev.nomorPerkara,
+    nomorPerkara: data.jadwal.perkara?.nomor_perkara || prev.nomorPerkara,
     tanggal: data.jadwal.waktu,
     ruangan: data.jadwal.ruangan,
   }
@@ -91,15 +91,6 @@ export function BookingWizard() {
   }
 
   /**
-   * Handler ketika existing queue ditemukan.
-   * Menampilkan ExistingQueueCard dengan opsi untuk reschedule atau booking baru.
-   */
-  const handleExistingQueue = (queue: ExistingQueue) => {
-    setExistingQueue(queue)
-    setCurrentStep('existing-queue')
-  }
-
-  /**
    * Handler untuk multi-pihak flow.
    * Dipanggil oleh StepValidate ketika existing queue ditemukan.
    * Jika ada existing queue, tampilkan ExistingQueueCard.
@@ -116,7 +107,7 @@ export function BookingWizard() {
         status: data.existing_queue.status,
         slot_time: data.existing_queue.slot_time,
         pihak_nama: data.pihak_nama,
-        nomor_perkara: data.jadwal.nomor_perkara || "",
+        nomor_perkara: data.jadwal.perkara?.nomor_perkara || "",
         ruang_sidang: data.jadwal.ruangan,
       })
       setCurrentStep(4)
@@ -211,7 +202,6 @@ export function BookingWizard() {
         <BlurFade>
           <StepValidate
             onNext={handleValidateNext}
-            onExistingQueue={handleExistingQueue}
             onMultiPihak={handleMultiPihak}
             onError={handleValidateError}
           />
@@ -236,6 +226,7 @@ export function BookingWizard() {
           <StepSelectSlot
             perkaraId={bookingData.perkaraId}
             tanggal={bookingData.tanggal}
+            ruangan={bookingData.ruangan}
             onNext={handleSlotNext}
             onBack={() => setCurrentStep(1)}
             currentSlot={existingQueue?.slot_time}
@@ -265,7 +256,11 @@ export function BookingWizard() {
       {currentStep === 4 && ticket && (
         <BlurFade>
           <StepTicket
-            ticket={ticket}
+            ticket={{
+              ...ticket,
+              // Ekstrak date portion dari timestamp untuk ditampilkan di tiket
+              tanggal: bookingData.tanggal ? bookingData.tanggal.split("T")[0] : undefined,
+            }}
             onCheckStatus={handleCheckStatus}
             onBookAgain={handleBookAgain}
           />
