@@ -1,6 +1,7 @@
 # Frontend Design Parity — Design Specification
 
 **Date:** 2026-05-24
+**Revision:** v2 (post-review round 2, footer Opsi C applied, 20+ CSS detail findings)
 **Author:** brainstorming session (user + Claude)
 **Status:** Approved — ready for plan
 **Related design source:** `docs/design-antrian/`
@@ -97,21 +98,74 @@ Append ke `app/globals.css`:
 
 Batch paling rendah risiko. Fokus copy text + styling tweak section static.
 
-### 2.1 Hero Section — Stats Delta Text
+### 2.1 Hero Section — Stats Delta Text + Tag Badges + Dark Variant
 
 **File:** `components/features/hero-section.tsx`
 
-Update stats delta text dari statis ke dinamis:
+#### A. Stat Label Tag Badges (NEW finding)
+
+Setiap stat card punya **tag badge** kecil di area label (flex justify-between dengan stat title):
+
+| Stat | Title | Tag Badge |
+|---|---|---|
+| Card 1 | Antrian Terdaftar | `HARI INI` |
+| Card 2 | Sidang Hari Ini | `SIPP` |
+| Card 3 | Tingkat Kehadiran | `30 HARI` |
+
+Tag styling: `font-mono text-[.62rem] font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground`. Card 3 (dark variant): `bg-gold/18 text-gold-3 border border-white`.
+
+#### B. Card 3 Dark Variant
+
+Card "Tingkat Kehadiran" pakai `.as-stat.dark` styling:
+- Background: `bg-gradient-to-br from-[var(--primary-3)] via-[#0a4e25] to-[#062f17]`
+- Number: gold gradient text `bg-gradient-to-b from-white to-[var(--gold-3)] bg-clip-text text-transparent`
+- Ambient overlay: radial gradient gold + accent (pseudo `::before` atau div absolute)
+- Label color: `text-white/65`
+- Delta color: `text-white/65`
+
+#### C. Stats Delta Text Update
 
 | Stat | Before | After |
 |---|---|---|
-| Antrian Saat Ini | `"Data SIPP hari ini"` | `"↑ 12% vs kemarin · ${currentTime} WITA"` |
-| Sedang Berlangsung | `"Sinkronisasi otomatis tiap 60 detik"` | `"${liveCount} sedang berlangsung · ${doneCount} selesai"` |
+| Antrian Terdaftar | `"Data SIPP hari ini"` | `"↑ 12% vs kemarin · ${currentTime} WITA"` |
+| Sidang Hari Ini | `"Sinkronisasi otomatis tiap 60 detik"` | `"${liveCount} sedang berlangsung · ${doneCount} selesai"` |
 | Tingkat Kehadiran | `"Peningkatan vs bulan lalu"` | `"▲ 4.2% improvement · ${attended}/${total} hadir"` |
 
 **Data source:** Reuse `getTodaySchedule()` + `calculateQueueStatistics()`. `currentTime` dari `Date.now()` formatted ke `HH:MM` WITA.
 
 **Fallback:** Bila data 0/null, gunakan text statis lama (hindari `"NaN sedang berlangsung"`).
+
+#### D. Hero Meta — Today Date (NEW finding)
+
+Tambah item meta terakhir dengan `marginLeft: auto` (pushed right) yang menampilkan tanggal hari ini:
+
+```tsx
+<span className="ml-auto inline-flex items-center px-3.5 py-1.5 bg-muted rounded-full border border-border font-mono text-[.75rem]">
+  {new Date().toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+</span>
+```
+
+#### E. Feature Cards — Alternating Icon Colors (NEW finding)
+
+Icon badge di setiap feature card pakai warna bergantian (sudah seperti design `.as-letter:nth-child(N)`):
+
+- Card 1: primary green / primary-soft bg
+- Card 2: gold `#92580a` / gold-soft bg
+- Card 3: accent `#9a3412` / accent-soft bg
+- Card 4: primary green / primary-soft bg
+
+Verifikasi current implementation — bila masih monochrome, tambahkan alternasi.
+
+#### F. Hero H1 Gradient Text (NEW finding)
+
+H1 pakai gradient text fg → primary:
+```css
+background: linear-gradient(180deg, var(--fg) 0%, color-mix(in oklab, var(--fg) 55%, var(--primary)) 100%);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+```
+
+Sebagai Tailwind: `bg-gradient-to-b from-foreground to-[color-mix(in_oklab,var(--foreground)_55%,var(--primary))] bg-clip-text text-transparent`.
 
 ### 2.2 Panduan Section — Header + Step Numbering
 
@@ -123,11 +177,16 @@ Update stats delta text dari statis ke dinamis:
    - Kiri: kicker pill `"Empat langkah · ±2 menit"` + heading `"Cara mendaftar antrian"` (bukan `"Panduan Pendaftaran"`)
    - Kanan: button `"Mulai Daftar →"` (primary, large)
 
-2. **Step card badge** → ganti text dekoratif ke **badge box 42×42px** warna bergantian:
-   - Step 01: `bg-primary text-white`
-   - Step 02: `bg-gold text-white`
-   - Step 03: `bg-accent text-white`
-   - Step 04: `bg-gold text-white`
+2. **Step card badge** → ganti text dekoratif ke **box 42×42px** dengan **mono number "01" font-size 1.5rem semibold**. Background soft tint, color tinted text, border 1px tinted:
+
+   | Step | Number Color | Background | Border |
+   |---|---|---|---|
+   | 01 | `var(--primary-3)` | `var(--primary-soft)` | `color-mix(primary 18%, transparent)` |
+   | 02 | `#92580a` | `var(--gold-soft)` | `color-mix(gold-2 30%, transparent)` |
+   | 03 | `#9a3412` | `var(--accent-soft)` | `color-mix(accent 25%, transparent)` |
+   | 04 | `var(--gold)` | `var(--gold-soft)` | `color-mix(gold-2 30%, transparent)` |
+
+   Render: `<span class="inline-grid place-items-center w-[42px] h-[42px] rounded-[10px] border font-mono text-[1.5rem] font-semibold leading-none">01</span>` dengan styling per nth-child.
 
 3. **Step footer line** → tambahkan garis horizontal + label `"Step 0N / 04"` di tiap card.
 
@@ -147,29 +206,65 @@ Update stats delta text dari statis ke dinamis:
    - Primary (existing): `"Daftar Antrian Sekarang →"` (accent orange)
    - **NEW Ghost on-dark**: `"Pelajari Selengkapnya"` → link ke `#sec-panduan`
 
-### 2.4 Footer Bar — Compact 4-Column Layout
+### 2.4 Footer Bar — Hybrid Layout (Opsi C, RESOLVED)
 
 **File:** `components/layout/footer.tsx`
 
-> ⚠️ **Open Question — see Section 7.1**: Konflik antara Q2 (keep improvements, footer elaborate) dan Q3 (pixel-perfect, footer compact). Spec di bawah merefleksikan Q3 (pixel-perfect). Bila user reaffirm Q2 saat review, batalkan section ini.
+**Decision:** Opsi C (Hybrid) — kombinasi compact row design di atas + detail row existing di bawah, dipisah border-top yang halus.
 
-Refactor dari **3-column elaborate** ke **4-column compact** sesuai `Panduan.jsx:55-72`:
+#### Struktur
 
 ```
-[Instansi] [Jam Operasional] [Sistem] [Kontak]
+┌────────────────────────────────────────────────────────────┐
+│ COMPACT ROW (design-style, grid 1.4fr 1fr 1fr 1fr)         │
+│ [Instansi] [Jam Op] [Sistem] [Kontak]                       │
+├────────────────────────────────────────────────────────────┤
+│ DETAIL ROW (existing, grid 3-col responsive)                │
+│ ┌─Logo+Deskripsi─┐ ┌──Kontak detail──┐ ┌──Jam detail──┐    │
+│ │ [PA] PA Penajam │ │ ☎ (0542)…       │ │ Sen-Kam ...   │    │
+│ │ Layanan digital │ │ ✉ admin@…       │ │ Jum 08-17     │    │
+│ │ ...             │ │ 📍 Jl. …         │ │               │    │
+│ └─────────────────┘ └─────────────────┘ └────────────────┘   │
+├────────────────────────────────────────────────────────────┤
+│ COPYRIGHT BAR (existing)                                    │
+│ © 2026 PA Penajam · v0.1.0                                  │
+└────────────────────────────────────────────────────────────┘
 ```
 
-- Grid 4-col equal width desktop, 2-col tablet, 1-col mobile
-- Padding compact: `py-8 px-6`
-- Label uppercase mono 0.7rem `var(--fg-4)`, value 0.95rem regular
-- **Copyright bar dihapus** (tidak ada di design)
-- **Logo + deskripsi panjang dihapus**
+#### A. Compact Row (NEW — top section)
 
-**Data source:**
-- Instansi: `useAppSettings().institution.name`
-- Jam: hardcoded `"Sen — Jum · 08:00 — 16:00 WITA"`
-- Sistem: hardcoded `"v0.1.0 · MVP · Live"`
-- Kontak: `useAppSettings().institution.phone`
+Sesuai design `.as-footer` (CSS line 918-947):
+
+- Grid `1.4fr 1fr 1fr 1fr` (kolom Instansi lebih lebar)
+- Background `bg-card` (var(--bg-elev))
+- Border 1px, rounded `var(--r-xl)`, shadow-sm
+- Each cell: `padding: 1.25rem 1.5rem`, `border-right: 1px solid var(--border)` (last no border)
+- **Mobile breakpoint < 900px**: 2-col grid, switch ke `border-bottom` separator
+
+| Cell | Label | Value |
+|---|---|---|
+| 1 | `Instansi` | `useAppSettings().institution.name` |
+| 2 | `Jam Operasional` | `Sen — Jum · 08:00 — 16:00 WITA` |
+| 3 | `Sistem` | `v0.1.0 · MVP · Live` |
+| 4 | `Kontak` | `useAppSettings().institution.phone` |
+
+Label styling: `text-[.68rem] uppercase tracking-[.04em] font-medium text-muted-foreground mb-1`
+Value styling: `text-[.88rem] font-medium text-foreground`
+
+#### B. Detail Row (EXISTING — preserved)
+
+Pertahankan layout 3-column existing dengan logo+deskripsi, kontak detail (phone/email/alamat), jam detail per hari (Sen-Kam, Jum). Ini SPBE compliance — alamat lengkap diperlukan.
+
+Tambah top margin/border untuk pemisah visual dari compact row:
+```tsx
+<div className="mt-6 pt-6 border-t border-border/40">
+  {/* existing 3-col detail */}
+</div>
+```
+
+#### C. Copyright Bar (EXISTING — preserved)
+
+Tetap di bawah, tidak ada perubahan.
 
 ### 2.5 Batch 1 Test Strategy
 
@@ -233,17 +328,86 @@ function parseParaPihak(html: string | null): { pihak: string; lawan: string | n
 
 Bila `queueNumber` null → tampilkan `"—"` (text-muted-foreground/40 placeholder).
 
-### 3.5 Desktop Row Layout
+### 3.5 Desktop Row Layout (UPDATED with CSS detail)
 
 ```tsx
-<div className="hidden md:grid grid-cols-[76px_1.4fr_1.3fr_96px_1.2fr_96px_130px] items-center gap-4">
-  <div>{/* Antrian — font-mono bold primary, "—" fallback */}</div>
-  <div>{/* Perkara — caseNumber bold + caseType mono uppercase */}</div>
-  <div>{/* Para Pihak — partyName + small "vs. {opposingParty}" */}</div>
-  <div>{/* Waktu — mono semibold + small "WITA" */}</div>
-  <div>{/* Agenda — text-muted-foreground */}</div>
-  <div>{/* Ruangan */}</div>
-  <div>{/* Status badge */}</div>
+<div className="hidden md:grid grid-cols-[76px_1.4fr_1.3fr_96px_1.2fr_96px_130px]">
+  {/* Antrian — PILL bg-muted mono semibold 0.85rem */}
+  <div className="px-3 py-3.5 flex items-center">
+    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted font-mono font-semibold text-[.85rem] whitespace-nowrap">
+      {queueNumber || '—'}
+    </span>
+  </div>
+  
+  {/* Perkara — caseNumber 0.85rem medium + jenis 0.7rem NOT uppercase */}
+  <div className="px-3 py-3.5">
+    <div className="text-[.85rem] font-medium text-foreground truncate">{caseNumber}</div>
+    <div className="text-[.7rem] text-muted-foreground mt-0.5">{caseType}</div>
+  </div>
+  
+  {/* Para Pihak — 0.85rem medium + small lawan 0.75rem */}
+  <div className="px-3 py-3.5">
+    <div className="text-[.85rem] font-medium truncate">{partyName}</div>
+    {opposingParty && (
+      <small className="block text-[.75rem] text-muted-foreground mt-0.5">vs. {opposingParty}</small>
+    )}
+  </div>
+  
+  {/* Waktu — mono semibold 1rem + WITA uppercase 0.68rem */}
+  <div className="px-3 py-3.5">
+    <div className="font-mono font-semibold text-[1rem]">{time}</div>
+    <small className="block text-[.68rem] uppercase tracking-[.04em] text-muted-foreground/60 mt-0.5">WITA</small>
+  </div>
+  
+  {/* Agenda — 0.88rem fg-2 line-height 1.35 */}
+  <div className="px-3 py-3.5 text-[.88rem] text-foreground/80 leading-[1.35]">{agenda}</div>
+  
+  {/* Ruangan — 0.88rem medium */}
+  <div className="px-3 py-3.5 text-[.88rem] font-medium">{room}</div>
+  
+  {/* Status — badge with pip + label */}
+  <div className="px-3 py-3.5 flex items-center justify-end">
+    <StatusBadge status={status} />
+  </div>
+</div>
+```
+
+#### Status Badge Component
+
+```tsx
+function StatusBadge({ status }: { status: ScheduleStatus }) {
+  const config = STATUS_CONFIG[status]
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[.72rem] font-medium",
+      config.className
+    )}>
+      <span className={cn("h-1.5 w-1.5 rounded-full", config.pipClass, status === 'in_progress' && "animate-as-pulse")} />
+      {config.label}
+    </span>
+  )
+}
+```
+
+Status mapping (sesuai design `STATUS_LABEL` di data.jsx):
+- `in_progress` → `"Sedang Berlangsung"` (bukan "Berlangsung") + accent-soft bg + accent border + pip accent
+- `completed` → `"Selesai"` + bg-muted + muted-foreground + pip fg-4
+- `scheduled` → `"Terjadwal"` + primary-soft + primary border + pip primary
+- `postponed` → `"Ditunda"` + gold-soft + gold-2 border + pip gold-2
+
+#### Row "is-active" State (NEW finding)
+
+Row dengan status `in_progress` punya **gradient bg + left stripe**:
+
+```tsx
+<div className={cn(
+  "relative hover:bg-muted/50 transition-colors border-t border-border",
+  isLive && "bg-gradient-to-r from-accent/10 to-transparent",
+)}>
+  {isLive && (
+    <span className="absolute left-0 top-[10%] bottom-[10%] w-[3px] bg-accent rounded-r" />
+  )}
+  {/* ... cells ... */}
 </div>
 ```
 
@@ -472,12 +636,16 @@ const STEPS = [
 ]
 ```
 
-State styling:
-- `isDone`: border-success bg-success/10 text-success
-- `isActive`: border-primary bg-primary text-primary-foreground shadow-sm
-- `pending`: border-border bg-muted/30 text-muted-foreground
+State styling (UPDATED — done pakai ACCENT orange, bukan success green):
+- `isActive`: bg-card text-foreground shadow-sm, lingkaran number bg-primary text-white
+- `isDone`: text-foreground/80, lingkaran number **bg-accent text-white** (orange, bukan green!)
+- `pending`: text-muted-foreground, lingkaran border-border-strong bg-card text-muted-foreground
 
-Icon dalam pill: 5×5 lingkaran dengan number (atau ✓ untuk done).
+Container: grid `repeat(4, 1fr)` di bg-muted, padding 0.65rem, gap 0.5rem.
+
+Pill: padding `.55rem .85rem`, rounded 999px, font-sans 0.8rem font-medium.
+
+Icon dalam pill: lingkaran **22×22 px** (bukan 5×5 dari spec lama) dengan mono number atau ✓ untuk done.
 
 Animasi: `transition-all duration-300` (smooth, no framer-motion).
 
@@ -543,17 +711,19 @@ Field Nama dan Telepon **bukan obsolete** — design memakainya sebagai layer cr
 
 Helper `formatDate('2026-05-23')` → `"Senin, 23 Mei 2026"` (di `lib/utils.ts`).
 
-#### Slot Card
+#### Slot Card (UPDATED with CSS detail)
+
+Grid container: `grid-cols-4` desktop, `grid-cols-2` mobile (<700px), gap 0.65rem.
 
 States:
-- **Available**: border-border, hover border-primary/40, cursor-pointer
-- **Selected**: border-primary bg-primary/5 ring-2 ring-primary/20
-- **Full**: border-border/50 bg-muted/30 opacity-50 cursor-not-allowed
+- **Available**: `bg-card border-border shadow-sm`, hover `translate-y-[-2px] shadow-md border-border-strong`
+- **Selected**: `bg-gradient-to-br from-[var(--primary)] to-[var(--primary-2)] text-white border-primary shadow-md ring-[3px] ring-[var(--primary-ring)] translate-y-[-2px]`
+- **Full**: `bg-muted opacity-65 cursor-not-allowed shadow-none`
 
 Content:
-- Time: `font-mono text-lg font-bold`
-- Capacity: `"{available} dari {capacity} tersedia"` atau badge `"Penuh"` (destructive)
-- Progress bar: 1px height, width `{(booked/capacity)*100}%`
+- Time: **`font-sans text-[1.15rem] font-semibold tracking-[-.02em]`** (BUKAN mono!)
+- Capacity: `"{available} dari {capacity} tersedia"` atau badge `"Penuh"` color `var(--danger)`
+- Progress bar: **4px height** (bukan 1px), bg-muted, fill linear-gradient `var(--primary-2) → var(--primary)`. Saat selected: bg white/25 dengan fill white.
 
 ### 5.4 Step 3 — Confirm
 
@@ -574,22 +744,43 @@ Content:
 
 🔴 Posisi exact butuh backend extension. Sementara: estimasi dari `slot.booked + 1`, label tambah `(estimasi)`.
 
-#### ConfirmRow Component
+#### Confirm Grid (REVISED — 2-column grid layout, NOT single column)
+
+Sesuai design `.as-confirm` (CSS line 1216-1240) — grid **2-column dengan border separator** (bukan 1-col 8-row dari spec lama):
 
 ```tsx
-function ConfirmRow({ label, value }: { label: string; value: string }) {
+<div className="grid grid-cols-1 sm:grid-cols-2 bg-card border border-border rounded-[var(--radius-lg)] overflow-hidden">
+  {rows.map((row, i) => (
+    <ConfirmCell
+      key={i}
+      label={row.label}
+      value={row.value}
+      // borders: bottom kecuali 2 row terakhir, right kecuali nth even
+      isLastRow={i >= rows.length - 2}
+      isRightCol={(i + 1) % 2 === 0}
+    />
+  ))}
+</div>
+
+function ConfirmCell({ label, value, isLastRow, isRightCol }) {
   return (
-    <div className="grid grid-cols-[140px_1fr] gap-4 py-3 border-b border-border last:border-0">
-      <span className="text-[.78rem] font-mono uppercase tracking-wide text-muted-foreground">
+    <div className={cn(
+      "px-4 py-3.5 flex flex-col gap-0.5",
+      !isLastRow && "border-b border-border",
+      !isRightCol && "border-r border-border sm:border-r",
+    )}>
+      <span className="text-[.72rem] font-medium text-muted-foreground">
         {label}
       </span>
-      <span className="text-[.92rem] font-medium text-foreground">
+      <span className="text-[.92rem] font-medium text-foreground tracking-[-.005em]">
         {value}
       </span>
     </div>
   )
 }
 ```
+
+**Layout result:** 8 fields → 4 rows × 2 cols, dengan border interior crisp. Label bukan uppercase mono — design pakai sans 0.72rem fg-3 regular. Value sans 0.92rem semibold.
 
 #### Race Condition Re-check
 
@@ -599,39 +790,87 @@ KEEP existing logic (re-check slot tiap 30 detik). Tambah visual indicator small
 
 **File:** `components/features/booking-wizard/step-ticket.tsx`
 
-#### Layout 2-Column
+#### Layout 2-Column dengan Perforated Effect (UPDATED — round 2)
+
+Sesuai design `.as-ticket-side` (CSS line 1270-1282) — dashed border-left + **circle cutouts** untuk efek tiket sobek.
 
 ```tsx
-<div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr] overflow-hidden rounded-2xl border">
-  {/* Main: callup-gradient dark green */}
-  <div className="callup-gradient text-white p-8">
-    <span>Antrian Sidang · {institutionName}</span>
-    <div className="text-gradient-gold text-[clamp(56px,9vw,110px)]">
-      {queueNumber}
-    </div>
-    <TicketRow label="Atas Nama" value={form.nama} onDark />
-    <TicketRow label="Nomor Perkara" value={form.nomor_perkara} onDark />
-    <div>
-      <Button>Salin Nomor</Button>
-      <Button>Cetak Tiket</Button>
+<div className="relative grid grid-cols-1 md:grid-cols-[1.4fr_1fr] overflow-hidden rounded-[var(--radius-xl)] border border-border shadow-md bg-card">
+  {/* Main — Dark Green Gradient */}
+  <div className="relative p-7 flex flex-col gap-3.5 text-white overflow-hidden bg-gradient-to-br from-[#062f17] via-[var(--primary-3)] to-[var(--primary)]">
+    {/* Ambient gold + accent overlay */}
+    <div className="absolute inset-0 pointer-events-none" style={{
+      background: 'radial-gradient(circle at 0% 100%, rgba(212,160,23,.35), transparent 60%), radial-gradient(circle at 100% 0%, rgba(234,88,12,.18), transparent 60%)'
+    }} />
+    <div className="relative z-10 flex flex-col gap-3.5">
+      <span className="font-mono text-[.72rem] text-white/65">
+        Antrian Sidang · {institutionName}
+      </span>
+      <div className="text-[clamp(56px,9vw,110px)] font-bold leading-[.9] tracking-[-.06em] bg-gradient-to-b from-white to-[var(--gold-3)] bg-clip-text text-transparent">
+        {queueNumber}
+      </div>
+      <TicketRow label="Atas Nama" value={form.nama} onDark />
+      <TicketRow label="Nomor Perkara" value={form.nomor_perkara} onDark />
+      <div className="flex gap-2 mt-2">
+        <Button size="sm" variant="ghost-on-dark">Salin Nomor</Button>
+        <Button size="sm" variant="ghost-on-dark">Cetak Tiket</Button>
+      </div>
     </div>
   </div>
   
-  {/* Side: gold-soft bg */}
-  <div className="bg-[var(--gold-soft)] p-8">
-    <TicketRow label="Tanggal · Waktu" value={...} />
+  {/* Side — Gold soft + DASHED border + CIRCLE CUTOUTS */}
+  <div className="relative p-6 flex flex-col gap-3 bg-[var(--gold-soft)] md:border-l md:border-dashed md:border-[var(--border-strong)]">
+    {/* Perforated cutouts */}
+    <span className="hidden md:block absolute -left-[10px] -top-[10px] w-[18px] h-[18px] rounded-full bg-background" />
+    <span className="hidden md:block absolute -left-[10px] -bottom-[10px] w-[18px] h-[18px] rounded-full bg-background" />
+    
+    <TicketRow label="Tanggal · Waktu" value={`${formatDate(date)} · ${slot.time} WITA`} />
     <TicketRow label="Estimasi Mulai" value={`±${slot.time} – ${addMin(slot.time, 30)} WITA`} />
     <TicketRow label="Ruang" value={ruang || "Akan diumumkan saat panggilan"} />
     
-    {/* Real QR — KEEP existing qrcode.react */}
-    <QRCodeSVG value={qrPayload} size={140} level="M" />
+    {/* QR — full width aspect-square, primary-3 dark bg, padding 0.55rem */}
+    <div className="mt-auto aspect-square w-full grid place-items-center p-[.55rem] rounded-[var(--radius-md)] bg-[var(--primary-3)] shadow-[inset_0_0_0_1px_var(--border),0_4px_12px_-4px_rgba(15,95,46,.4)]">
+      <QRCodeSVG value={qrPayload} size={140} level="M" className="w-full h-full rounded" />
+    </div>
   </div>
 </div>
 
-<p className="text-center font-mono text-[.75rem] mt-5 opacity-55">
+<p className="text-center font-mono text-[.75rem] mt-5 opacity-55 tracking-[.06em]">
   Notifikasi WhatsApp akan dikirim ke {form.telepon || '(tidak terdaftar)'} 
   30 menit sebelum panggilan.
 </p>
+```
+
+#### TicketRow Component
+
+```tsx
+function TicketRow({ label, value, onDark }: { label: string; value: string; onDark?: boolean }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className={cn(
+        "text-[.68rem] uppercase tracking-[.04em] font-medium",
+        onDark ? "text-white/55" : "text-muted-foreground"
+      )}>{label}</span>
+      <span className={cn(
+        "text-[.88rem] font-medium leading-[1.35]",
+        onDark ? "text-white" : "text-foreground"
+      )}>{value}</span>
+    </div>
+  )
+}
+```
+
+#### Print Styles (NEW finding)
+
+Sesuai design CSS line 1343-1346:
+```css
+@media print {
+  body::before { display: none; }
+  /* Hide everything except ticket */
+  header, .hero-section, .schedule-table, .queue-status, .panduan-section, .footer-cta, footer {
+    display: none !important;
+  }
+}
 ```
 
 #### Helper Baru
@@ -875,17 +1114,11 @@ Plus backend coordination: ~2h
 
 ## 7. Open Questions & Preservation Notes
 
-### 7.1 Open Question — Footer Layout Direction
+### 7.1 Resolved — Footer Layout Direction (Opsi C)
 
-**Issue:** Q2 (Pertahankan semua improvements) explicitly mencantumkan footer existing sebagai improvement (3-col elaborate dengan logo, alamat, jam detail per hari). Q3 (Pixel-perfect) mengarahkan ke design 4-col compact.
+**Status:** ✅ Resolved — user pilih **Opsi C (Hybrid)** pada review v1.
 
-**Recommendation:** Klarifikasi saat spec review. 3 opsi:
-
-- **Opsi A** — Strict pixel-perfect (current spec) → refactor ke 4-col compact, hapus copyright/logo/alamat
-- **Opsi B** — Keep existing improvement → batalkan Section 2.4, footer stay 3-col elaborate
-- **Opsi C** — Hybrid → Tambahkan 4-col compact row di atas existing 3-col detail (best of both, paling panjang vertically)
-
-**Resolution akan menentukan apakah Section 2.4 valid atau di-discard.**
+Spec Section 2.4 sudah di-update merefleksikan Opsi C: compact 4-col row design di atas + detail 3-col existing di bawah + copyright bar tetap. Implementation menambah border separator di antara compact dan detail row untuk visual clarity.
 
 ### 7.2 Improvements Existing yang Harus Dipertahankan
 
@@ -952,4 +1185,53 @@ Frontend tidak boleh blocking pada backend readiness. Sequence yang direkomendas
 
 ---
 
-**Status:** Approved, ready for `writing-plans` skill to break into micro-tasks.
+---
+
+## 8. Changelog
+
+### v2 — 2026-05-24 (post-review round 2)
+
+**Trigger:** User request `"opsi C, dan lakukan review ulang design"`.
+
+**Footer resolution:**
+- Section 2.4 — apply Opsi C (Hybrid): compact row design + existing detail + copyright
+- Section 7.1 — resolved, marked closed
+
+**Round 2 findings (dari deep-read `app.css` + komponen design):**
+
+| # | Section | Finding |
+|---|---|---|
+| 1 | 2.1 (Hero stats) | Tag badges per card ("HARI INI"/"SIPP"/"30 HARI") — mono 0.62rem pill |
+| 2 | 2.1 (Hero stats) | Card 3 dark variant: gradient bg primary-3, gold gradient number, white/65 labels |
+| 3 | 2.1 (Hero meta) | Today date item dengan `marginLeft: auto` (pushed right), `toLocaleDateString id-ID` |
+| 4 | 2.1 (Hero features) | Icon colors alternating: primary, gold, accent, primary per nth-child |
+| 5 | 2.1 (Hero h1) | Gradient text `fg → primary` (background-clip text), bukan solid color |
+| 6 | 2.2 (Panduan steps) | Step number BOX 42×42 dengan **mono "01" 1.5rem**, soft tint bg + tinted border per nth |
+| 7 | 3.5 (Schedule qn) | Queue number adalah **pill** `bg-muted` mono semibold 0.85rem padding `.2rem .5rem` rounded 6px |
+| 8 | 3.5 (Schedule perkara.jenis) | Bukan uppercase mono — sans 0.7rem fg-3 regular |
+| 9 | 3.5 (Schedule status) | Label `"Sedang Berlangsung"` (bukan `"Berlangsung"`) sesuai design |
+| 10 | 3.5 (Schedule row) | `is-active` row: gradient bg + 3px stripe left accent (pseudo before) |
+| 11 | 5.1 (Stepper done) | Done state pakai **accent orange** (`var(--accent)`), bukan success green |
+| 12 | 5.1 (Stepper container) | Grid `bg-muted` padding 0.65rem, pill rounded 999px, lingkaran 22×22 |
+| 13 | 5.3 (Slot time) | Font **sans** 1.15rem semibold, bukan mono |
+| 14 | 5.3 (Slot selected) | Background gradient primary, ring 3px primary-ring, text white |
+| 15 | 5.3 (Slot progress bar) | 4px height, gradient primary-2 → primary fill |
+| 16 | 5.4 (Confirm grid) | **2-column grid** (8 fields = 4 rows × 2 cols), bukan single-col 8-row |
+| 17 | 5.4 (Confirm label) | Sans 0.72rem fg-3 regular, bukan uppercase mono |
+| 18 | 5.5 (Ticket side) | **Dashed border-left** + **circle cutouts** top/bottom (perforated effect) |
+| 19 | 5.5 (Ticket QR) | Full-width aspect-square, dark primary-3 bg, padding 0.55rem, green ring shadow |
+| 20 | 5.5 (Print) | `@media print` hide semua kecuali tiket — design supports print |
+
+**Font correction:**
+- CLAUDE.md mention "Outfit + Plus Jakarta Sans" outdated. Implementation already uses **Geist + Geist Mono** via `geist/font`. No change needed.
+
+**Removed assumptions:**
+- Screenshot `home.png` ternyata stale — diabaikan, JSX + CSS adalah source of truth
+
+### v1 — 2026-05-24 (initial brainstorming)
+
+Initial spec dengan 6 section utama + Open Questions section.
+
+---
+
+**Status:** v2 approved, ready for `writing-plans` skill to break into micro-tasks.
