@@ -36,16 +36,18 @@ describe('QueueStatus', () => {
   it('renders queue status title', async () => {
     render(<QueueStatus />)
 
+    // Header bagian status sekarang menggunakan label "Live · Panggilan Aktif"
     await waitFor(() => {
-      expect(screen.getByText(/status antrian/i)).toBeInTheDocument()
+      expect(screen.getByText(/live · panggilan aktif/i)).toBeInTheDocument()
     })
   })
 
   it('displays current queue number after loading', async () => {
     render(<QueueStatus />)
 
+    // Label nomor antrian aktif sekarang berbunyi "Nomor Antrian Saat Ini"
     await waitFor(() => {
-      expect(screen.getByText(/nomor antrian sekarang/i)).toBeInTheDocument()
+      expect(screen.getByText(/nomor antrian saat ini/i)).toBeInTheDocument()
     })
   })
 
@@ -74,10 +76,10 @@ describe('QueueStatus', () => {
   })
 
   it('shows loading skeleton initially', () => {
-    render(<QueueStatus />)
+    const { container } = render(<QueueStatus />)
 
-    // Saat loading, judul tetap terlihat di skeleton
-    expect(screen.getByText(/status antrian/i)).toBeInTheDocument()
+    // Skeleton loading muncul terlebih dahulu sebelum data ter-fetch
+    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0)
   })
 
   it('calls getTodaySchedule on mount', async () => {
