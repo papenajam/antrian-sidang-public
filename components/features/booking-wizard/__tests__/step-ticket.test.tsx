@@ -1,54 +1,87 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { StepTicket } from '../step-ticket'
+import { StepTicket } from '@/components/features/booking-wizard/step-ticket'
 
-describe('StepTicket', () => {
-  const defaultProps = {
-    ticket: {
-      queue_number: 'A-003',
-      status: 'waiting' as const,
-      slot_time: '09:00',
-      pihak_nama: 'Ahmad bin Ahmad',
-      nomor_perkara: '123/Pdt.G/2024/PA.Pps',
-      ruang_sidang: 'Ruang Sidang 1',
-      tanggal: '2026-05-30',
+vi.mock('@/contexts/app-settings-context', () => ({
+  useAppSettings: () => ({
+    settings: {
+      institution: { name: 'Pengadilan Agama Penajam', short_name: 'PA Penajam' },
+      app: { name: 'Antrian Sidang', short_name: 'AS', description: '' },
     },
+    isLoading: false,
+    error: null,
+    refreshSettings: vi.fn(),
+  }),
+}))
+
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}))
+
+beforeEach(() => { vi.clearAllMocks() })
+
+const mockTicket = {
+  queue_number: 'S-014',
+  status: 'waiting' as const,
+  pihak_nama: 'Andre Pratama',
+  nomor_perkara: '0091/Pdt.G/2026/PA.Pnj',
+  ruang_sidang: 'Ruang 1',
+  slot_time: '10:00',
+  tanggal: '2026-05-23',
+}
+
+describe('StepTicket — Layout', () => {
+  const mockProps = {
+    ticket: mockTicket,
     onCheckStatus: vi.fn(),
     onBookAgain: vi.fn(),
   }
 
-  it('renders queue number prominently', () => {
-    render(<StepTicket {...defaultProps} />)
-    expect(screen.getByText('A-003')).toBeInTheDocument()
+  it('renders queue number S-014', () => {
+    render(<StepTicket {...mockProps} />)
+    expect(screen.getByText('S-014')).toBeInTheDocument()
   })
 
-  it('renders ticket details', () => {
-    render(<StepTicket {...defaultProps} />)
-
-    // Slot time ditampilkan sebagai "09:00 - 10:00"
-    expect(screen.getByText(/09:00/)).toBeInTheDocument()
-    expect(screen.getByText('Ruang Sidang 1')).toBeInTheDocument()
-    expect(screen.getByText('123/Pdt.G/2024/PA.Pps')).toBeInTheDocument()
-    expect(screen.getByText('Ahmad bin Ahmad')).toBeInTheDocument()
+  it('renders kicker "Antrian Sidang · Pengadilan Agama Penajam"', () => {
+    render(<StepTicket {...mockProps} />)
+    expect(screen.getByText(/Antrian Sidang · Pengadilan Agama Penajam/)).toBeInTheDocument()
   })
 
-  it('renders success message', () => {
-    render(<StepTicket {...defaultProps} />)
-    expect(screen.getByText(/booking berhasil/i)).toBeInTheDocument()
+  it('renders TicketRow Atas Nama + Nomor Perkara', () => {
+    render(<StepTicket {...mockProps} />)
+    expect(screen.getByText('Atas Nama')).toBeInTheDocument()
+    expect(screen.getByText('Nomor Perkara')).toBeInTheDocument()
   })
+
+  it('renders real QR code (qrcode.react)', () => {
+    const { container } = render(<StepTicket {...mockProps} />)
+    expect(container.querySelector('svg')).toBeInTheDocument()
+  })
+
+  it('renders WhatsApp notification footnote', () => {
+    render(<StepTicket {...mockProps} telepon="081234567890" />)
+    expect(screen.getByText(/Notifikasi WhatsApp akan dikirim/)).toBeInTheDocument()
+  })
+})
+
+describe('StepTicket — Actions', () => {
+  const onCheckStatus = vi.fn()
+  const onBookAgain = vi.fn()
+
+  const mockProps = {
+    ticket: mockTicket,
+    onCheckStatus,
+    onBookAgain,
+  }
 
   it('calls onCheckStatus when button clicked', () => {
-    const onCheckStatus = vi.fn()
-    render(<StepTicket {...defaultProps} onCheckStatus={onCheckStatus} />)
-
+    render(<StepTicket {...mockProps} />)
     fireEvent.click(screen.getByRole('button', { name: /cek status/i }))
     expect(onCheckStatus).toHaveBeenCalled()
   })
 
   it('calls onBookAgain when button clicked', () => {
-    const onBookAgain = vi.fn()
-    render(<StepTicket {...defaultProps} onBookAgain={onBookAgain} />)
-
+    render(<StepTicket {...mockProps} />)
     fireEvent.click(screen.getByRole('button', { name: /booking lagi/i }))
     expect(onBookAgain).toHaveBeenCalled()
   })

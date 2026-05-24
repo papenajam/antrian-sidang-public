@@ -1,16 +1,18 @@
 "use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { motion } from "framer-motion"
-import { CheckCircle, Search, Plus, Clock, MapPin, FileText, User, Calendar, Copy, Printer, Ticket, Sparkles } from "lucide-react"
+import { Search, Plus, Copy, Printer, MessageCircle } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import { toast } from "sonner"
+import { useAppSettings } from "@/contexts/app-settings-context"
 import type { QueueTicket } from "@/lib/api-types"
 
 interface StepTicketProps {
   ticket: QueueTicket & { slot_time: string; tanggal?: string }
+  /** Nomor telepon pihak — untuk footer notifikasi WhatsApp */
+  telepon?: string
   onCheckStatus: () => void
   onBookAgain: () => void
 }
@@ -46,296 +48,255 @@ function handlePrint() {
   window.print()
 }
 
-export function StepTicket({ ticket, onCheckStatus, onBookAgain }: StepTicketProps) {
-  const endHour = parseInt(ticket.slot_time.split(":")[0], 10) + 1
-  const endTime = `${endHour.toString().padStart(2, "0")}:00`
+/**
+ * Baris data tiket: label di atas, nilai di bawah.
+ */
+function TicketRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[10px] font-semibold uppercase tracking-widest text-white/50">
+        {label}
+      </span>
+      <span className="text-sm font-semibold leading-snug text-white/90">
+        {value}
+      </span>
+    </div>
+  )
+}
 
+export function StepTicket({ ticket, telepon, onCheckStatus, onBookAgain }: StepTicketProps) {
+  const { settings } = useAppSettings()
+
+  // Nama institusi dengan fallback
+  const institutionName = settings?.institution?.name ?? "Pengadilan Agama"
+  const appName = settings?.app?.name ?? "Antrian Sidang"
+
+  // Data QR code untuk validasi
   const qrData = `antrian-sidang:${ticket.queue_number}:${ticket.nomor_perkara}`
 
   return (
     <>
-      {/* Print-optimized styles */}
+      {/* Gaya cetak — hanya area ticket-print-area yang tercetak */}
       <style jsx global>{`
         @media print {
-          body * {
-            visibility: hidden;
-          }
-
+          body * { visibility: hidden; }
           .ticket-print-area,
-          .ticket-print-area * {
-            visibility: visible;
-          }
-
+          .ticket-print-area * { visibility: visible; }
           .ticket-print-area {
             position: absolute;
-            left: 0;
-            top: 0;
+            left: 0; top: 0;
             width: 100%;
             padding: 20mm;
           }
-
-          .ticket-print-area .no-print {
-            display: none !important;
-          }
-
-          .ticket-print-area .print-only {
-            display: block !important;
-          }
-
-          .ticket-print-area .bg-gradient-to-r {
-            background: #16a34a !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-
-          .ticket-print-area .bg-amber-50 {
-            background: #fefce8 !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-
-          .ticket-print-area .text-primary {
-            color: #16a34a !important;
-          }
-
-          .ticket-print-area svg {
-            display: block !important;
-          }
+          .ticket-print-area .no-print { display: none !important; }
+          .ticket-print-area .print-only { display: block !important; }
         }
-
         @media screen {
-          .print-only {
-            display: none !important;
-          }
+          .print-only { display: none !important; }
         }
       `}</style>
 
       <BlurFade>
-        <Card className="ticket-print-area overflow-hidden shadow-xl ring-1 ring-foreground/5">
-          {/* Success header */}
-          <div className="relative overflow-hidden bg-gradient-to-r from-primary via-primary to-primary-hover p-6 text-white sm:p-8">
-            {/* Decorative elements */}
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
-            <div className="absolute -bottom-20 -left-10 h-32 w-32 rounded-full bg-white/5" />
-
-            <CardHeader className="relative z-10 p-0">
-              <CardTitle className="flex items-center gap-3 text-xl sm:text-2xl">
-                <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: "spring", stiffness: 200, damping: 15 }}
-                  className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm"
-                >
-                  <Sparkles className="h-6 w-6" />
-                </motion.div>
-                <span>Booking Berhasil!</span>
-              </CardTitle>
-            </CardHeader>
-
-            <p className="relative z-10 mt-2 text-sm text-white/80">
-              Simpan tiket ini dan tunjukkan saat tiba di pengadilan
-            </p>
+        {/* ---- Banner sukses di atas tiket ---- */}
+        <motion.div
+          className="mb-4 flex items-center gap-3 rounded-xl bg-success/10 px-5 py-3 ring-1 ring-success/20"
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+        >
+          <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-success/20">
+            <svg className="h-4 w-4 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
           </div>
+          <div>
+            <p className="text-sm font-semibold text-success">Booking Berhasil!</p>
+            <p className="text-xs text-muted-foreground">Simpan tiket ini dan tunjukkan saat tiba di pengadilan</p>
+          </div>
+        </motion.div>
 
-          <CardContent className="space-y-6 p-6 sm:p-8">
-            {/* QR Code Section with enhanced visuals */}
-            <motion.div
-              className="text-center"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
+        {/* ---- Tiket perforated ---- */}
+        <div className="ticket-print-area overflow-hidden rounded-2xl shadow-xl ring-1 ring-foreground/10">
+
+          {/* === Grid dua kolom: main (kiri) + side QR (kanan) === */}
+          <div className="grid grid-cols-1 sm:grid-cols-[1.4fr_1fr]">
+
+            {/* -------------------------------------------------- */}
+            {/* Kolom Kiri — background hijau gelap + nomor antrian */}
+            {/* -------------------------------------------------- */}
+            <div
+              className="relative flex flex-col justify-between gap-6 overflow-hidden p-6 sm:p-8"
+              style={{
+                background: "linear-gradient(135deg, #062f17 0%, var(--primary-3, #0f5f2e) 50%, var(--primary, #15803d) 100%)",
+              }}
             >
-              {/* Success icon */}
-              <motion.div
-                className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-success/20 to-success/10 shadow-lg dark:from-success/20 dark:to-success/10"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20, delay: 0.1 }}
-              >
-                <CheckCircle className="h-10 w-10 text-primary" />
-              </motion.div>
+              {/* Lingkaran dekoratif latar */}
+              <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/5" />
+              <div className="pointer-events-none absolute -bottom-24 -left-12 h-48 w-48 rounded-full bg-white/5" />
 
-              {/* QR Code dengan enhanced styling */}
-              <div className="mx-auto mb-4 inline-block rounded-2xl border-4 border-dashed border-primary/20 bg-white p-5 shadow-xl ring-2 ring-primary/10">
-                <QRCodeSVG
-                  value={qrData}
-                  size={150}
-                  level="H"
-                  bgColor="#ffffff"
-                  fgColor="#16a34a"
-                />
-              </div>
-
-              <p className="mb-5 text-sm text-muted-foreground">
-                Scan QR code ini saat datang ke pengadilan
+              {/* -- Kicker -- */}
+              <p className="relative z-10 text-[11px] font-semibold uppercase tracking-widest text-white/60">
+                {appName} · {institutionName}
               </p>
 
-              {/* Nomor Antrian - Hero element */}
-              <div className="mx-auto mb-2 inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-primary/10 to-primary/5 px-6 py-4 ring-1 ring-primary/20">
+              {/* -- Nomor antrian raksasa -- */}
+              <motion.div
+                className="relative z-10 flex items-end gap-3"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.1 }}
+              >
                 <div>
-                  <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    Nomor Antrian Anda
-                  </div>
-                  <div className="text-5xl font-bold tracking-tight text-primary sm:text-6xl">
+                  <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-white/50">
+                    Nomor Antrian
+                  </p>
+                  {/* Angka besar dengan gradient gold */}
+                  <span
+                    className="block bg-clip-text text-transparent font-extrabold leading-none tracking-tight"
+                    style={{
+                      fontSize: "clamp(80px, 12vw, 140px)",
+                      backgroundImage: "linear-gradient(180deg, #ffffff 0%, var(--gold-3, #f4d27a) 100%)",
+                    }}
+                  >
                     {ticket.queue_number}
-                  </div>
+                  </span>
                 </div>
+                {/* Tombol salin nomor antrian */}
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="icon"
                   onClick={() => copyToClipboard(ticket.queue_number, "Nomor antrian")}
                   aria-label="Salin nomor antrian"
-                  className="flex-shrink-0 rounded-xl border-2 no-print hover:-translate-y-0.5 hover:shadow-md focus-ring"
+                  className="no-print mb-3 flex-shrink-0 rounded-xl text-white/60 hover:bg-white/10 hover:text-white focus-ring"
                 >
                   <Copy className="h-5 w-5" />
                 </Button>
-              </div>
-            </motion.div>
+              </motion.div>
 
-            {/* Detail Tiket dengan enhanced visual hierarchy */}
-            <motion.div
-              className="overflow-hidden rounded-2xl border shadow-lg ring-1 ring-foreground/5"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              {/* Header: Tanggal & Ruangan - Prioritas Tertinggi */}
-              {ticket.tanggal && (
-                <div className="bg-gradient-to-r from-primary to-primary/80 p-5 text-white">
-                  <div className="grid grid-cols-2 gap-5">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                        <Calendar className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-medium uppercase tracking-wider text-white/70">
-                          Tanggal Sidang
-                        </div>
-                        <div className="text-base font-bold sm:text-lg">{formatTanggal(ticket.tanggal)}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                        <MapPin className="h-6 w-6" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-medium uppercase tracking-wider text-white/70">
-                          Ruangan
-                        </div>
-                        <div className="text-base font-bold sm:text-lg">{ticket.ruang_sidang}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              {/* -- Detail tiket (TicketRow) -- */}
+              <motion.div
+                className="relative z-10 grid grid-cols-2 gap-x-4 gap-y-4"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <TicketRow label="Atas Nama" value={ticket.pihak_nama} />
+                <TicketRow label="Nomor Perkara" value={ticket.nomor_perkara} />
+                {ticket.tanggal && (
+                  <TicketRow label="Tanggal Sidang" value={formatTanggal(ticket.tanggal)} />
+                )}
+                <TicketRow label="Waktu" value={ticket.slot_time} />
+                <TicketRow label="Ruangan" value={ticket.ruang_sidang} />
+              </motion.div>
+
+              {/* -- Footer note WhatsApp (bila telepon tersedia) -- */}
+              {telepon && (
+                <motion.div
+                  className="relative z-10 flex items-center gap-2 rounded-lg bg-white/8 p-3"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.35 }}
+                >
+                  <MessageCircle className="h-4 w-4 flex-shrink-0 text-white/60" />
+                  <p className="text-[11px] leading-snug text-white/70">
+                    Notifikasi WhatsApp akan dikirim ke{" "}
+                    <span className="font-semibold text-white/90">{telepon}</span>
+                  </p>
+                </motion.div>
               )}
+            </div>
 
-              {/* Body: Detail Lainnya */}
-              <div className="space-y-4 p-5">
-                {/* Waktu */}
-                <div className="flex items-center gap-4 rounded-xl bg-muted/30 p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <Clock className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs font-medium text-muted-foreground sm:text-sm">Jam Sidang</div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl font-bold sm:text-2xl">{ticket.slot_time}</span>
-                      <span className="text-muted-foreground">—</span>
-                      <span className="text-xl font-bold sm:text-2xl">{endTime}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Nomor Perkara */}
-                <div className="flex items-center gap-4 rounded-xl bg-muted/30 p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/10">
-                    <FileText className="h-5 w-5 text-secondary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs font-medium text-muted-foreground sm:text-sm">Nomor Perkara</div>
-                    <div className="text-base font-semibold sm:text-lg">{ticket.nomor_perkara}</div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => copyToClipboard(ticket.nomor_perkara, "Nomor perkara")}
-                    aria-label="Salin nomor perkara"
-                    className="flex-shrink-0 rounded-lg no-print hover:bg-muted focus-ring"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {/* Nama Pihak */}
-                <div className="flex items-center gap-4 rounded-xl bg-muted/30 p-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10">
-                    <User className="h-5 w-5 text-accent-hover" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs font-medium text-muted-foreground sm:text-sm">Nama Pihak</div>
-                    <div className="text-base font-semibold sm:text-lg">{ticket.pihak_nama}</div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Status Indicator - Enhanced */}
-            <motion.div
-              className="flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-amber-50 to-yellow-50 p-5 ring-1 ring-amber-200/50 dark:from-amber-950/30 dark:to-yellow-950/30"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 }}
+            {/* -------------------------------------------------- */}
+            {/* Kolom Kanan — area QR code dengan efek perforated   */}
+            {/* -------------------------------------------------- */}
+            <div
+              className="relative flex flex-col items-center justify-center gap-5 p-6 sm:p-8"
+              style={{ background: "var(--gold-soft, #fbf3df)" }}
             >
-              <div className="relative">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100">
-                  <Ticket className="h-4 w-4 text-amber-600" />
-                </div>
-                <span className="absolute -right-1 -top-1 flex h-4 w-4">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-                  <span className="relative inline-flex h-4 w-4 rounded-full bg-amber-500" />
-                </span>
-              </div>
-              <div>
-                <div className="font-semibold text-amber-800 dark:text-amber-200">Status: Menunggu</div>
-                <div className="text-xs text-amber-600/70 dark:text-amber-400/70">
-                  Harap hadir 15 menit sebelum jadwal sidang
-                </div>
-              </div>
-            </motion.div>
+              {/* -- Cutout perforated — lingkaran kiri atas -- */}
+              <div
+                className="absolute -left-2 top-8 h-4 w-4 rounded-full bg-background ring-1 ring-foreground/5"
+                aria-hidden="true"
+              />
+              {/* -- Cutout perforated — lingkaran kiri bawah -- */}
+              <div
+                className="absolute -left-2 bottom-8 h-4 w-4 rounded-full bg-background ring-1 ring-foreground/5"
+                aria-hidden="true"
+              />
+              {/* -- Garis putus-putus pemisah (hanya desktop) -- */}
+              <div
+                className="absolute left-0 top-0 hidden h-full border-l border-dashed border-foreground/15 sm:block"
+                aria-hidden="true"
+              />
 
-            {/* Actions - Enhanced buttons */}
-            <motion.div
-              className="flex flex-col gap-3 sm:flex-row no-print"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
+              {/* -- QR Code -- */}
+              <motion.div
+                className="flex flex-col items-center gap-4"
+                initial={{ scale: 0.85, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 200, damping: 22, delay: 0.15 }}
+              >
+                {/* Container QR dengan background primary */}
+                <div
+                  className="flex aspect-square items-center justify-center rounded-2xl p-4"
+                  style={{ background: "var(--primary-3, #0f5f2e)" }}
+                >
+                  <QRCodeSVG
+                    value={qrData}
+                    size={140}
+                    level="M"
+                    bgColor="transparent"
+                    fgColor="#ffffff"
+                  />
+                </div>
+
+                {/* Caption mono di bawah QR */}
+                <p className="font-mono text-[10px] font-medium tracking-widest text-foreground/50">
+                  Scan untuk validasi
+                </p>
+              </motion.div>
+
+              {/* -- Label institusi di bawah QR -- */}
+              <p className="text-center text-[10px] font-semibold uppercase tracking-wider text-foreground/40">
+                {institutionName}
+              </p>
+            </div>
+          </div>
+
+          {/* -------------------------------------------------- */}
+          {/* Baris tombol aksi — di luar grid dua kolom          */}
+          {/* -------------------------------------------------- */}
+          <motion.div
+            className="no-print flex flex-col gap-3 bg-card p-5 sm:flex-row sm:p-6"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <Button
+              onClick={onCheckStatus}
+              className="flex-1 gap-2 rounded-xl py-5 text-sm font-semibold shadow-md transition-all hover:-translate-y-0.5 hover:shadow-lg focus-ring"
             >
-              <Button
-                onClick={onCheckStatus}
-                className="flex-1 gap-2 rounded-xl py-5 text-sm font-semibold shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl focus-ring"
-              >
-                <Search className="h-5 w-5" />
-                Cek Status Antrian
-              </Button>
-              <Button
-                variant="outline"
-                onClick={onBookAgain}
-                className="flex-1 gap-2 rounded-xl border-2 py-5 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-ring"
-              >
-                <Plus className="h-5 w-5" />
-                Booking Lagi
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handlePrint}
-                className="flex-1 gap-2 rounded-xl border-2 py-5 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-ring"
-              >
-                <Printer className="h-5 w-5" />
-                Cetak Tiket
-              </Button>
-            </motion.div>
-          </CardContent>
-        </Card>
+              <Search className="h-4 w-4" />
+              Cek Status Antrian
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onBookAgain}
+              className="flex-1 gap-2 rounded-xl border-2 py-5 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-ring"
+            >
+              <Plus className="h-4 w-4" />
+              Booking Lagi
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handlePrint}
+              className="flex-1 gap-2 rounded-xl border-2 py-5 text-sm font-semibold shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-ring"
+            >
+              <Printer className="h-4 w-4" />
+              Cetak Tiket
+            </Button>
+          </motion.div>
+        </div>
       </BlurFade>
     </>
   )

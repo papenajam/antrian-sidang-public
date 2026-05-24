@@ -288,6 +288,7 @@ export function BookingWizard() {
                 ...ticket,
                 tanggal: bookingData.tanggal ? bookingData.tanggal.split("T")[0] : undefined,
               }}
+              telepon={personalData?.telepon}
               onCheckStatus={handleCheckStatus}
               onBookAgain={handleBookAgain}
             />
