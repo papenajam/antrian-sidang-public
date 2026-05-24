@@ -16,7 +16,7 @@ export function BookingModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto w-full">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="sr-only">
           <DialogTitle>Daftar Antrian Baru</DialogTitle>
           <DialogDescription>

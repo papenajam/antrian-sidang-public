@@ -22,8 +22,8 @@ export function FormProgress({ steps, currentStep }: FormProgressProps) {
       aria-label="Progress pendaftaran"
       className="mb-6 w-full"
     >
-      {/* Daftar pill langkah secara horizontal */}
-      <ol className="flex items-stretch gap-2">
+      {/* Daftar pill langkah — horizontal di sm+, hanya pill aktif yang menampilkan label di mobile */}
+      <ol className="flex items-stretch gap-1.5 sm:gap-2">
         {steps.map((step) => {
           // Tentukan state setiap langkah berdasarkan currentStep (1-based)
           const isDone = step.id < currentStep
@@ -33,13 +33,18 @@ export function FormProgress({ steps, currentStep }: FormProgressProps) {
           return (
             <li
               key={step.id}
-              className="flex flex-1"
+              className={cn(
+                // Di mobile pill aktif lebih lebar (flex-[3]) sementara pill lain hanya
+                // menampilkan lingkaran nomor (flex-shrink-0). Di sm+ semua sama lebar.
+                "flex sm:flex-1",
+                isActive && "flex-[3]"
+              )}
               aria-current={isActive ? "step" : undefined}
             >
               {/* Pill container — tampilan berbeda per state */}
               <div
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-all",
+                  "flex w-full min-w-0 items-center gap-2 rounded-full border px-2.5 py-2 text-xs font-semibold transition-all sm:px-3",
                   // State: selesai — background accent, teks accent-foreground
                   isDone && "border-accent bg-accent text-accent-foreground",
                   // State: aktif — background card dengan shadow, teks primary
@@ -64,15 +69,17 @@ export function FormProgress({ steps, currentStep }: FormProgressProps) {
                   {isDone ? "✓" : step.id}
                 </span>
 
-                {/* Label langkah — format "Langkah N — Nama" */}
+                {/* Label langkah — format "Langkah N — Nama" di sm+ */}
                 <span className="hidden truncate sm:inline">
                   Langkah {step.id} — {step.label}
                 </span>
 
-                {/* Versi mobile: hanya label tanpa "Langkah N —" */}
-                <span className="inline truncate sm:hidden">
-                  {step.label}
-                </span>
+                {/* Versi mobile: hanya tampilkan label untuk pill aktif (hemat ruang) */}
+                {isActive && (
+                  <span className="inline truncate sm:hidden">
+                    {step.label}
+                  </span>
+                )}
               </div>
             </li>
           )

@@ -125,7 +125,7 @@ export function CekStatusDialog({ open, onOpenChange }: CekStatusDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[640px]">
+      <DialogContent className="sm:max-w-[640px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Cek Status Antrian</DialogTitle>
         </DialogHeader>
