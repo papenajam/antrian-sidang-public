@@ -23,6 +23,7 @@ export type QueueStatus =
 export interface JadwalSidang {
   id: number;
   perkara_id: number;
+  queue_number?: string | null; // Nomor antrian sidang — opsional, backend extension pending
   ruangan: string;
   waktu: string; // Tanggal dan waktu sidang (datetime string)
   jam_sidang: string | null;
