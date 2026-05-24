@@ -86,6 +86,7 @@ export function PanduanSection() {
           className="inline-flex h-9 shrink-0 items-center gap-2 rounded-[var(--radius-md)] bg-primary px-4 text-[.875rem] font-semibold text-primary-foreground shadow-[var(--sh-sm)] transition-all duration-150 hover:brightness-110 active:scale-[.97] sm:mt-1"
         >
           Mulai Daftar
+          <span aria-hidden="true">→</span>
         </button>
       </div>
 
