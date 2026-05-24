@@ -30,7 +30,7 @@ export function SlotCard({ slot, selected, onSelect, disabled = false }: SlotCar
         "min-w-[120px] min-h-[100px]",
         isDisabled && "cursor-not-allowed opacity-50 bg-muted border-muted",
         !isDisabled && !selected && "cursor-pointer hover:border-primary/50 hover:bg-primary/5 border-border",
-        selected && "border-primary bg-gradient-to-br from-primary to-primary/80 shadow-md ring-3 ring-primary/30 text-white"
+        selected && "border-primary bg-gradient-to-br from-primary to-primary/80 shadow-md ring-[3px] ring-primary/30 text-white"
       )}
     >
       <div className="text-lg font-bold">
