@@ -1,13 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { BlurFade } from "@/components/magic/blur-fade"
 import { NumberTicker } from "@/components/magic/number-ticker"
-import { motion } from "framer-motion"
-import { Users, Clock, CheckCircle, ArrowLeftRight, Info, Activity } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { RescheduleDialog } from "./reschedule-dialog"
 import { getTodaySchedule, calculateQueueStatistics } from "@/lib/queue-service"
 import { toast } from "sonner"
@@ -60,19 +55,16 @@ export function QueueStatus({
         return
       }
 
-      const statistics = calculateQueueStatistics(
-        scheduleResponse.data,
-        []
-      )
+      const statistics = calculateQueueStatistics(scheduleResponse.data, [])
 
-      // Check if we have real data
-      const hasRealData = statistics.currentNumber > 0 ||
+      // Periksa apakah data real tersedia
+      const hasRealData =
+        statistics.currentNumber > 0 ||
         statistics.waitingCount > 0 ||
         statistics.processedToday > 0 ||
         scheduleResponse.data.length > 0
 
       setHasData(hasRealData)
-
       setData({
         currentNumber: statistics.currentNumber,
         waitingCount: statistics.waitingCount,
@@ -102,8 +94,15 @@ export function QueueStatus({
   }
 
   const handleReschedule = () => {
-    if (!bookingState.queueNumber || !bookingState.perkaraId || !bookingState.currentSlot || !bookingState.tanggal) {
-      toast.warning("Fitur ganti jadwal tersedia setelah Anda melakukan booking")
+    if (
+      !bookingState.queueNumber ||
+      !bookingState.perkaraId ||
+      !bookingState.currentSlot ||
+      !bookingState.tanggal
+    ) {
+      toast.warning(
+        "Fitur ganti jadwal tersedia setelah Anda melakukan booking"
+      )
       return
     }
     setShowReschedule(true)
@@ -111,67 +110,62 @@ export function QueueStatus({
 
   const hasActiveBooking = isActive || bookingState.queueNumber !== null
 
+  // Skeleton loading
   if (isLoading) {
     return (
-      <Card className="overflow-hidden border border-muted-foreground/10 shadow-premium bg-card/60 backdrop-blur-md">
-        <CardHeader className="border-b border-muted/10 pb-4">
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary animate-pulse" />
-            Status Antrian Saat Ini
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-6">
-          <Skeleton className="h-28 w-full rounded-2xl bg-muted/65" />
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-20 w-full rounded-2xl bg-muted/65" />
-            <Skeleton className="h-20 w-full rounded-2xl bg-muted/65" />
+      <div
+        id="sec-status"
+        className="callup-gradient overflow-hidden rounded-[var(--radius-2xl)] p-6 md:p-10"
+      >
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-[1.4fr_1fr]">
+          <Skeleton className="h-56 w-full rounded-2xl bg-white/10" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-1">
+            <Skeleton className="h-24 rounded-2xl bg-white/10" />
+            <Skeleton className="h-24 rounded-2xl bg-white/10" />
           </div>
-          <Skeleton className="h-12 w-full rounded-xl bg-muted/65" />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     )
   }
 
   return (
-    <BlurFade>
-      <Card className="overflow-hidden border border-muted-foreground/10 shadow-premium bg-card/60 backdrop-blur-md">
-        <CardHeader className="bg-gradient-to-r from-primary/5 to-transparent pb-4 border-b border-muted/10">
-          <CardTitle className="flex items-center justify-between">
-            <span className="flex items-center gap-2 font-heading text-lg">
-              <Activity className="h-5 w-5 text-primary" />
-              Status Antrian Saat Ini
-            </span>
-            {data?.lastUpdated && data.lastUpdated !== "-" && (
-              <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-                Update: {data.lastUpdated}
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6 pt-6">
-          {/* Nomor antrian yang sedang dipanggil - Hero section */}
-          <motion.div
-            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary to-primary-hover p-6 text-center text-white shadow-xl border border-white/10 sm:p-8"
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          >
-            {/* Animated background effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/5 to-white/0" />
+    <>
+      <section
+        id="sec-status"
+        className="callup-gradient relative overflow-hidden rounded-[var(--radius-2xl)] p-6 md:p-10"
+      >
+        {/* Ambient glow di balik konten */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 80% at 0% 0%, rgba(212,160,23,.25), transparent 55%), radial-gradient(ellipse 50% 60% at 100% 80%, rgba(234,88,12,.12), transparent 55%)",
+          }}
+          aria-hidden="true"
+        />
 
-            <div className="relative">
-              {/* Pulse indicator */}
-              <div className="absolute -right-1 -top-1 flex h-4 w-4">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/40 opacity-75" />
-                <span className="relative inline-flex h-4 w-4 rounded-full bg-white" />
+        <div className="relative z-10 grid grid-cols-1 gap-6 md:grid-cols-[1.4fr_1fr]">
+          {/* ── KOLOM KIRI — Panggilan aktif ── */}
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
+                <div className="h-2 w-2 animate-as-pulse rounded-full bg-accent" />
+                <span className="text-[.78rem] font-medium uppercase tracking-wide text-white/70">
+                  Live · Panggilan Aktif
+                </span>
               </div>
+              {data?.lastUpdated && data.lastUpdated !== "-" && (
+                <span className="rounded-full bg-white/5 px-2.5 py-1 text-[.7rem] font-mono text-white/40">
+                  {data.lastUpdated}
+                </span>
+              )}
+            </div>
 
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-white/85 sm:text-sm">
-                Nomor Antrian Sekarang
-              </div>
-              <div className="text-6xl font-heading font-extrabold tracking-tight sm:text-7xl lg:text-8xl text-white drop-shadow-md">
+            {/* Nomor antrian besar */}
+            <div className="flex-1 flex flex-col items-center justify-center rounded-[var(--radius-xl)] bg-white/[.04] border border-white/[.08] p-8 text-center">
+              <div className="text-[clamp(64px,8vw,120px)] font-bold leading-none tracking-[-0.04em] text-gradient-gold drop-shadow-[0_2px_10px_rgba(212,160,23,.35)]">
                 {!hasData && data?.currentNumber === 0 ? (
-                  <span className="text-white/70">—</span>
+                  <span className="text-white/30">—</span>
                 ) : (
                   <NumberTicker
                     value={data?.currentNumber || 0}
@@ -180,169 +174,111 @@ export function QueueStatus({
                   />
                 )}
               </div>
-              <div className="mt-4 flex items-center justify-center gap-2 bg-white/10 rounded-full py-1.5 px-4 w-fit mx-auto border border-white/10">
-                <div className="h-2.5 w-2.5 rounded-full bg-success animate-pulse sm:h-3 sm:w-3" />
-                <span className="text-xs font-semibold text-white/95 sm:text-sm uppercase tracking-wider">
-                  Sedang Dipanggil
-                </span>
-              </div>
+              <span className="mt-3 inline-flex items-center gap-2 font-mono text-[.82rem] font-medium text-white/50">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent animate-as-pulse" />
+                Nomor Antrian Saat Ini
+              </span>
             </div>
-          </motion.div>
-
-          {/* Statistik antrian - Grid cards */}
-          <div className="grid gap-4 sm:grid-cols-2 sm:gap-5">
-            {/* Menunggu */}
-            <motion.div
-              className="group relative overflow-hidden rounded-2xl border border-muted/40 bg-card/40 p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-premium hover:border-secondary/40"
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              whileHover={{ scale: 1.01 }}
-            >
-              <div className="absolute left-0 top-0 h-full w-1.5 bg-secondary" />
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary/10 text-secondary border border-secondary/20">
-                  <Users className="h-6 w-6" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-3xl font-heading font-bold">
-                    {!hasData && data?.waitingCount === 0 ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <NumberTicker
-                        value={data?.waitingCount || 0}
-                        duration={1.5}
-                        showDashForZero={true}
-                      />
-                    )}
-                  </div>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Menunggu
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Selesai */}
-            <motion.div
-              className="group relative overflow-hidden rounded-2xl border border-muted/40 bg-card/40 p-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-premium hover:border-primary/30"
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              whileHover={{ scale: 1.01 }}
-            >
-              <div className="absolute left-0 top-0 h-full w-1.5 bg-primary" />
-              <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/15">
-                  <CheckCircle className="h-6 w-6" />
-                </div>
-                <div className="flex-1">
-                  <div className="text-3xl font-heading font-bold">
-                    {!hasData && data?.processedToday === 0 ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <NumberTicker
-                        value={data?.processedToday || 0}
-                        duration={1.5}
-                        showDashForZero={true}
-                      />
-                    )}
-                  </div>
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Selesai Hari Ini
-                  </div>
-                </div>
-              </div>
-            </motion.div>
           </div>
 
-          {/* Informasi estimasi waktu */}
-          {hasData && (
-            <motion.div
-              className="flex items-center gap-4 rounded-2xl bg-muted/40 border border-muted/10 p-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Clock className="h-5 w-5" />
+          {/* ── KOLOM KANAN — Ringkasan ── */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-1">
+            {/* Menunggu */}
+            <div className="rounded-[var(--radius-lg)] bg-white/[.04] border border-white/[.08] p-5">
+              <div className="flex items-center gap-2 text-[.78rem] font-medium text-white/50">
+                <span className="h-2 w-2 rounded-full bg-[var(--gold)]" />
+                Antrian Menunggu
               </div>
-              <div>
-                <div className="text-xs font-semibold text-muted-foreground">
-                  Estimasi Waktu Tunggu
-                </div>
-                <div className="text-base font-bold text-foreground">
-                  15-20 menit per nomor
-                </div>
+              <div className="mt-2 text-[clamp(32px,3vw,44px)] font-bold leading-none tracking-[-0.04em] text-white">
+                {!hasData && data?.waitingCount === 0 ? (
+                  <span className="text-white/30">—</span>
+                ) : (
+                  <NumberTicker
+                    value={data?.waitingCount || 0}
+                    duration={1}
+                    showDashForZero={true}
+                  />
+                )}
               </div>
-            </motion.div>
-          )}
+              <div className="mt-1 text-[.72rem] text-white/35 font-mono">
+                Estimasi 15-20 menit per nomor
+              </div>
+            </div>
 
-          {/* Info jika belum ada data */}
-          {!hasData && (
-            <motion.div
-              className="flex items-center gap-4 rounded-2xl bg-muted/45 border border-muted/10 p-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted/80 text-muted-foreground">
-                <Info className="h-5 w-5" />
+            {/* Selesai */}
+            <div className="rounded-[var(--radius-lg)] bg-white/[.04] border border-white/[.08] p-5">
+              <div className="flex items-center gap-2 text-[.78rem] font-medium text-white/50">
+                <span className="h-2 w-2 rounded-full bg-success" />
+                Selesai Hari Ini
               </div>
-              <div>
-                <div className="text-sm font-bold text-foreground">
-                  Belum ada data antrian hari ini
-                </div>
-                <div className="text-xs text-muted-foreground/80">
-                  Data akan muncul otomatis setelah ada pendaftaran
-                </div>
+              <div className="mt-2 text-[clamp(32px,3vw,44px)] font-bold leading-none tracking-[-0.04em] text-white">
+                {!hasData && data?.processedToday === 0 ? (
+                  <span className="text-white/30">—</span>
+                ) : (
+                  <NumberTicker
+                    value={data?.processedToday || 0}
+                    duration={1}
+                    showDashForZero={true}
+                  />
+                )}
               </div>
-            </motion.div>
-          )}
+              <div className="mt-1 text-[.72rem] text-white/35 font-mono">
+                Sidang yang sudah dipanggil
+              </div>
+            </div>
 
-          {/* Tombol aksi */}
-          <motion.div
-            className="flex flex-col gap-3 sm:flex-row sm:gap-4"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            <Button
-              variant="outline"
-              onClick={handleCheckStatus}
-              className="flex-1 gap-2 rounded-xl border border-muted-foreground/20 hover:border-primary hover:bg-primary/5 hover:text-primary py-5 text-sm font-semibold transition-all duration-300 hover:-translate-y-0.5 shadow-sm hover:shadow-premium focus-ring"
-            >
-              <Info className="h-4 w-4" />
-              Cek Status
-            </Button>
-            <Button
-              variant={hasActiveBooking ? "outline" : "ghost"}
-              onClick={handleReschedule}
-              disabled={!hasActiveBooking}
-              className="flex-1 gap-2 rounded-xl border border-muted-foreground/20 hover:border-secondary hover:bg-secondary/5 hover:text-secondary-hover py-5 text-sm font-semibold transition-all duration-300 hover:-translate-y-0.5 shadow-sm hover:shadow-premium disabled:cursor-not-allowed disabled:opacity-50 focus-ring"
-              title={!hasActiveBooking ? "Fitur ganti jadwal tersedia setelah booking" : ""}
-            >
-              <ArrowLeftRight className="h-4 w-4" />
-              Ganti Jadwal
-            </Button>
-          </motion.div>
-        </CardContent>
-      </Card>
+            {/* Tombol aksi */}
+            <div className="grid grid-cols-2 gap-3 sm:col-span-2 md:col-span-1">
+              <button
+                onClick={handleCheckStatus}
+                className="rounded-[var(--radius-md)] border border-white/10 bg-white/5 px-4 py-3 text-[.82rem] font-medium text-white/80 transition-all duration-200 hover:bg-white/10 cursor-pointer"
+              >
+                Cek Status
+              </button>
+              <button
+                onClick={handleReschedule}
+                disabled={!hasActiveBooking}
+                className="rounded-[var(--radius-md)] border border-[var(--gold)]/20 bg-[var(--gold)]/10 px-4 py-3 text-[.82rem] font-medium text-[var(--gold)] transition-all duration-200 hover:bg-[var(--gold)]/20 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+                title={
+                  !hasActiveBooking
+                    ? "Fitur ganti jadwal tersedia setelah booking"
+                    : ""
+                }
+              >
+                Ganti Jadwal
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Info jika belum ada data */}
+        {!hasData && (
+          <div className="relative z-10 mt-6 flex items-center gap-3 rounded-[var(--radius-md)] bg-white/[.04] border border-white/[.08] p-4">
+            <span className="text-[.82rem] text-white/50">
+              Belum ada data antrian hari ini — data muncul otomatis setelah ada pendaftaran.
+            </span>
+          </div>
+        )}
+      </section>
 
       {/* Dialog ganti jadwal */}
-      {bookingState.queueNumber && bookingState.perkaraId && bookingState.currentSlot && bookingState.tanggal && (
-        <RescheduleDialog
-          open={showReschedule}
-          onOpenChange={setShowReschedule}
-          queueNumber={bookingState.queueNumber}
-          perkaraId={bookingState.perkaraId}
-          currentSlot={bookingState.currentSlot}
-          tanggal={bookingState.tanggal}
-          onSuccess={() => {
-            fetchData()
-            toast.success("Jadwal berhasil diubah!")
-          }}
-        />
-      )}
-    </BlurFade>
+      {bookingState.queueNumber &&
+        bookingState.perkaraId &&
+        bookingState.currentSlot &&
+        bookingState.tanggal && (
+          <RescheduleDialog
+            open={showReschedule}
+            onOpenChange={setShowReschedule}
+            queueNumber={bookingState.queueNumber}
+            perkaraId={bookingState.perkaraId}
+            currentSlot={bookingState.currentSlot}
+            tanggal={bookingState.tanggal}
+            onSuccess={() => {
+              fetchData()
+              toast.success("Jadwal berhasil diubah!")
+            }}
+          />
+        )}
+    </>
   )
 }

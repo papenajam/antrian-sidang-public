@@ -2,138 +2,133 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Scale, Menu, X, Sun, Moon } from "lucide-react"
-import { useTheme } from "next-themes"
+import { Sun, Moon } from "lucide-react"
 import { useAppSettings } from "@/contexts/app-settings-context"
-import { FloatingActionButton } from "@/components/features/floating-action-button"
 
+/**
+ * Daftar navigasi utama.
+ * Setiap item merujuk ke section di halaman yang sama (scroll ke anchor).
+ */
 const NAV_LINKS = [
-  { href: "/", label: "Beranda" },
-  { href: "#jadwal", label: "Jadwal Sidang" },
-  { href: "/kontak", label: "Kontak" },
+  { id: "home", label: "Beranda" },
+  { id: "jadwal", label: "Jadwal" },
+  { id: "status", label: "Cek Status" },
+  { id: "panduan", label: "Panduan" },
 ]
 
 export function Header() {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
-  const { theme, setTheme } = useTheme()
+  const [activeNav, setActiveNav] = useState("home")
+  const [isDark, setIsDark] = useState(false)
   const { settings } = useAppSettings()
 
-  const institutionName = settings?.institution.name ?? "Pengadilan Agama Penajam"
+  const institutionName =
+    settings?.institution.name ?? "Pengadilan Agama Penajam"
+  const shortName = settings?.institution.short_name ?? "PA"
 
-  // Efek listener scroll untuk mendeteksi posisi scroll window
+  // Deteksi tema awal dari localStorage
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 10) {
-        setIsScrolled(true)
-      } else {
-        setIsScrolled(false)
-      }
-    }
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
+    const theme = localStorage.getItem("theme")
+    setIsDark(theme === "dark")
   }, [])
 
+  // Toggle dark mode
+  const toggleTheme = () => {
+    const next = !isDark
+    setIsDark(next)
+    if (next) {
+      document.documentElement.classList.add("dark")
+      localStorage.setItem("theme", "dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+      localStorage.setItem("theme", "light")
+    }
+  }
+
+  /**
+   * Scroll ke section berdasarkan ID navigasi.
+   * Offset 80px agar header glass tidak menutupi konten.
+   */
+  const scrollTo = (id: string) => {
+    setActiveNav(id)
+    if (id === "home") {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+      return
+    }
+    const el = document.getElementById(`sec-${id}`)
+    if (el) {
+      window.scrollTo({
+        top: el.getBoundingClientRect().top + window.scrollY - 80,
+        behavior: "smooth",
+      })
+    }
+  }
+
   return (
-    <>
-      <header 
-        className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-          isScrolled 
-            ? "bg-primary/90 backdrop-blur-md shadow-premium border-b border-white/10 py-3" 
-            : "bg-primary border-b border-transparent py-4"
-        } text-primary-foreground`}
+    <header
+      className="as-pad sticky top-4 z-50"
+      role="banner"
+    >
+      <div
+        className="flex items-center gap-2 glass rounded-full border border-border px-4 py-2.5 shadow-[var(--sh-sm)]"
       >
-        <div className="container mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* Logo dengan transisi scale & hover color */}
-          <Link href="/" className="flex items-center gap-2 group transition-transform duration-200 hover:scale-[1.02]">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 transition-colors group-hover:bg-white/20 border border-white/10">
-              <Scale className="h-5 w-5 text-secondary group-hover:rotate-12 transition-transform duration-300" />
-            </div>
-            <span className="font-heading font-bold text-lg tracking-tight select-none group-hover:text-amber-200 transition-colors">
-              {institutionName}
-            </span>
-          </Link>
-
-          {/* Desktop nav + theme toggle */}
-          <div className="hidden items-center gap-6 sm:flex">
-            <nav className="flex items-center gap-5" aria-label="Navigasi utama">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="relative text-sm font-medium text-white/80 hover:text-amber-200 transition-colors py-1 group/link"
-                >
-                  {link.label}
-                  {/* Underline emas yang melebar saat di-hover */}
-                  <span className="absolute bottom-0 left-0 h-[2px] w-0 bg-secondary transition-all duration-300 group-hover/link:w-full" />
-                </Link>
-              ))}
-            </nav>
-            <div className="h-4 w-px bg-white/20" />
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="rounded-xl p-2 hover:bg-white/10 text-white/85 hover:text-white transition-all border border-transparent hover:border-white/10"
-              aria-label={theme === "dark" ? "Aktifkan mode terang" : "Aktifkan mode gelap"}
-            >
-              {theme === "dark" ? (
-                <Sun className="h-5 w-5" />
-              ) : (
-                <Moon className="h-5 w-5" />
-              )}
-            </button>
-          </div>
-
-          {/* Mobile: theme toggle + hamburger */}
-          <div className="flex items-center gap-2 sm:hidden">
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="rounded-xl p-2 hover:bg-white/10 text-white/85 hover:text-white transition-colors"
-              aria-label={theme === "dark" ? "Aktifkan mode terang" : "Aktifkan mode gelap"}
-            >
-              {theme === "dark" ? (
-                <Sun className="h-5 w-5" />
-              ) : (
-                <Moon className="h-5 w-5" />
-              )}
-            </button>
-            <button
-              className="flex items-center rounded-xl p-2 hover:bg-white/10 text-white/85 hover:text-white transition-colors"
-              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-              aria-label={isMobileMenuOpen ? "Tutup menu" : "Buka menu"}
-              aria-expanded={isMobileMenuOpen}
-            >
-              {isMobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile dropdown menu dengan glass effect */}
-        {isMobileMenuOpen && (
-          <nav
-            className="border-t border-white/10 bg-primary px-4 pb-4 sm:hidden animate-slide-up"
-            aria-label="Navigasi mobile"
+        {/* Logo */}
+        <Link
+          href="/"
+          onClick={(e) => {
+            e.preventDefault()
+            scrollTo("home")
+          }}
+          className="mr-auto flex items-center gap-2.5 no-underline"
+        >
+          {/* Logo mark — kotak hijau tua dengan inisial */}
+          <div
+            className="grid h-[38px] w-[38px] place-items-center rounded-[10px] font-mono text-[.95rem] font-bold"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--primary) 0%, #0f5f2e 100%)",
+              color: "var(--gold, #f4d27a)",
+              boxShadow:
+                "0 4px 10px -2px var(--ring), inset 0 1px 0 rgba(255,255,255,.15), inset 0 0 0 1px var(--gold, #b8860b)",
+            }}
           >
-            <ul className="flex flex-col gap-2 pt-3">
-              {NAV_LINKS.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="block rounded-xl px-3 py-2.5 text-sm font-medium hover:bg-white/10 hover:text-amber-200 transition-all"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )}
-      </header>
-      <FloatingActionButton />
-    </>
+            {shortName}
+          </div>
+          <div className="leading-[1.1]">
+            <small className="block text-[.65rem] font-mono font-medium tracking-[.12em] uppercase text-muted-foreground">
+              Pengadilan Agama
+            </small>
+            <strong className="block text-[.92rem] font-semibold tracking-[-.005em] text-foreground">
+              {institutionName.replace("Pengadilan Agama ", "").toUpperCase()}
+            </strong>
+          </div>
+        </Link>
+
+        {/* Navigasi — hidden di mobile kecil */}
+        <nav className="hidden items-center gap-0.5 sm:flex" aria-label="Navigasi utama">
+          {NAV_LINKS.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => scrollTo(n.id)}
+              className={`rounded-full border-0 bg-transparent px-4 py-2 text-[.88rem] font-medium tracking-[-.005em] transition-all duration-200 cursor-pointer ${
+                activeNav === n.id
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              {n.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Theme toggle */}
+        <button
+          onClick={toggleTheme}
+          className="ml-1 grid h-9 w-9 place-items-center rounded-full border border-border bg-card text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          aria-label={isDark ? "Aktifkan mode terang" : "Aktifkan mode gelap"}
+        >
+          {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </button>
+      </div>
+    </header>
   )
 }

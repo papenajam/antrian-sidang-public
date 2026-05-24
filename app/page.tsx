@@ -1,33 +1,36 @@
 import { HeroSection } from "@/components/features/hero-section"
 import { QueueStatus } from "@/components/features/queue-status"
 import { ScheduleTable } from "@/components/features/schedule-table"
+import { PanduanSection } from "@/components/features/panduan-section"
+import { FooterCta } from "@/components/features/footer-cta"
 import { BookingModal } from "@/components/features/booking-modal"
 
+/**
+ * Halaman utama — menyusun seluruh section secara vertikal.
+ * Menggunakan container `as-pad` untuk padding konsisten.
+ */
 export default function Home() {
   return (
-    <div className="flex flex-col">
-      <HeroSection />
+    <>
+      <div className="as-pad relative z-10 flex flex-col gap-5 pb-12 pt-4">
+        {/* 1. Hero: Bigbox + Feature Cards + Stats */}
+        <HeroSection />
 
-      <main className="container mx-auto px-4 py-10 sm:px-6 sm:py-14 md:px-8 lg:py-16">
-        {/* Section: Status Antrian - Full width */}
-        <section className="mb-10 sm:mb-16">
-          <h2 className="mb-6 text-2xl font-bold tracking-tight sm:mb-8 sm:text-3xl lg:text-4xl">
-            Status Antrian
-          </h2>
-          <QueueStatus />
-        </section>
+        {/* 2. Status Antrian: Callup panel gelap */}
+        <QueueStatus />
 
-        {/* Section: Jadwal Sidang - Full width */}
-        <section id="jadwal" className="mb-10 sm:mb-16">
-          <h2 className="mb-6 text-2xl font-bold tracking-tight sm:mb-8 sm:text-3xl lg:text-4xl">
-            Jadwal Sidang Hari Ini
-          </h2>
-          <ScheduleTable />
-        </section>
-      </main>
+        {/* 3. Jadwal Sidang: Tabel + Search + Filter */}
+        <ScheduleTable />
 
-      {/* Booking Modal - rendered at page level */}
+        {/* 4. Panduan: 4 langkah pendaftaran */}
+        <PanduanSection />
+
+        {/* 5. Footer CTA */}
+        <FooterCta />
+      </div>
+
+      {/* Modal Booking Wizard */}
       <BookingModal />
-    </div>
+    </>
   )
 }
