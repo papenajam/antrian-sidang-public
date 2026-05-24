@@ -186,7 +186,7 @@ export function StepTicket({ ticket, telepon, onCheckStatus, onBookAgain }: Step
                   <TicketRow label="Tanggal Sidang" value={formatTanggal(ticket.tanggal)} />
                 )}
                 <TicketRow label="Waktu" value={ticket.slot_time} />
-                <TicketRow label="Ruangan" value={ticket.ruang_sidang} />
+                <TicketRow label="Ruangan" value={ticket.ruang_sidang ?? "-"} />
               </motion.div>
 
               {/* -- Footer note WhatsApp (bila telepon tersedia) -- */}
