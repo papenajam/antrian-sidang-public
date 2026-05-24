@@ -1,106 +1,75 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import { QueueStatus } from '../queue-status'
-import * as queueService from '@/lib/queue-service'
+import { render, screen } from '@testing-library/react'
+import { QueueStatus } from '@/components/features/queue-status'
 
-vi.mock('@/lib/queue-service', () => ({
-  getTodaySchedule: vi.fn(),
-  calculateQueueStatistics: vi.fn(),
+vi.mock('@/lib/hooks/use-current-call', () => ({
+  useCurrentCall: () => ({
+    data: {
+      current: {
+        queueNumber: 'S-014',
+        pihak: 'Andre Pratama',
+        lawan: 'Dewi Sartika',
+        nomorPerkara: '0091/Pdt.G/2026/PA.Pnj',
+        jenis: 'Cerai Talak',
+        ruang: 'Ruang 1',
+        agenda: 'Pemeriksaan Saksi',
+        waktu: '10:00',
+      },
+      next: {
+        queueNumber: 'S-015',
+        ruang: 'Ruang 3',
+        waktu: '10:30',
+        agenda: 'Pembuktian',
+      },
+      waitingCount: 7,
+      doneCount: 5,
+    },
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
 }))
 
-// Mock sonner toast
 vi.mock('sonner', () => ({
-  toast: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
+  toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
 }))
 
-describe('QueueStatus', () => {
-  const mockStatistics = {
-    currentNumber: 5,
-    waitingCount: 12,
-    processedToday: 23,
-    lastUpdated: '10:30:00',
-  }
+beforeEach(() => { vi.clearAllMocks() })
 
-  beforeEach(() => {
-    vi.clearAllMocks()
-    vi.mocked(queueService.getTodaySchedule).mockResolvedValue({
-      data: [],
-      error: null,
-    })
-    vi.mocked(queueService.calculateQueueStatistics).mockReturnValue(mockStatistics)
-  })
-
-  it('renders queue status title', async () => {
+describe('QueueStatus — Live Case Display', () => {
+  it('renders queue number S-014 large', () => {
     render(<QueueStatus />)
-
-    // Header bagian status sekarang menggunakan label "Live · Panggilan Aktif"
-    await waitFor(() => {
-      expect(screen.getByText(/live · panggilan aktif/i)).toBeInTheDocument()
-    })
+    expect(screen.getByText('S-014')).toBeInTheDocument()
   })
 
-  it('displays current queue number after loading', async () => {
+  it('renders party name "Andre Pratama"', () => {
     render(<QueueStatus />)
-
-    // Label nomor antrian aktif sekarang berbunyi "Nomor Antrian Saat Ini"
-    await waitFor(() => {
-      expect(screen.getByText(/nomor antrian saat ini/i)).toBeInTheDocument()
-    })
+    expect(screen.getByText(/Andre Pratama/)).toBeInTheDocument()
   })
 
-  it('displays waiting count', async () => {
+  it('renders opposing party "vs. Dewi Sartika"', () => {
     render(<QueueStatus />)
-
-    await waitFor(() => {
-      expect(screen.getByText(/menunggu/i)).toBeInTheDocument()
-    })
+    expect(screen.getByText(/vs\. Dewi Sartika/)).toBeInTheDocument()
   })
 
-  it('displays processed today count', async () => {
+  it('renders perkara · jenis line', () => {
     render(<QueueStatus />)
-
-    await waitFor(() => {
-      expect(screen.getByText(/selesai hari ini/i)).toBeInTheDocument()
-    })
+    expect(screen.getByText(/0091\/Pdt\.G\/2026\/PA\.Pnj.*Cerai Talak/)).toBeInTheDocument()
   })
 
-  it('renders reschedule button', async () => {
+  it('renders meta: ruang · agenda · waktu', () => {
     render(<QueueStatus />)
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /ganti jadwal/i })).toBeInTheDocument()
-    })
+    expect(screen.getByText(/Ruang 1.*Pemeriksaan Saksi.*10:00/)).toBeInTheDocument()
   })
 
-  it('shows loading skeleton initially', () => {
-    const { container } = render(<QueueStatus />)
-
-    // Skeleton loading muncul terlebih dahulu sebelum data ter-fetch
-    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0)
-  })
-
-  it('calls getTodaySchedule on mount', async () => {
+  it('renders next call cell with S-015', () => {
     render(<QueueStatus />)
-
-    await waitFor(() => {
-      expect(queueService.getTodaySchedule).toHaveBeenCalledTimes(1)
-    })
+    expect(screen.getByText(/S-015/)).toBeInTheDocument()
   })
 
-  it('shows error toast when schedule fetch fails', async () => {
-    const { toast } = await import('sonner')
-    vi.mocked(queueService.getTodaySchedule).mockResolvedValue({
-      data: [],
-      error: 'Network error',
-    })
-
+  it('renders waiting count 7 + estimated wait', () => {
     render(<QueueStatus />)
-
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith('Network error')
-    })
+    expect(screen.getByText('7')).toBeInTheDocument()
+    expect(screen.getByText(/Estimasi tunggu ±126 menit/)).toBeInTheDocument()
   })
 })
