@@ -143,12 +143,11 @@ describe('BookingWizard Integration', () => {
     })
     expect(queueService.getAvailableSlots).toHaveBeenCalledWith(123, '2026-05-30T09:00:00')
 
-    // NOTE: bookingData.nik saat ini selalu kosong karena StepValidate tidak
-    // mengirimkan nik ke parent. Bug ini perlu diperbaiki di komponen BookingWizard
-    // dengan menambahkan callback untuk mengirim nik dari StepValidate.
+    // NIK dari StepValidate dipropagasi ke BookingWizard via
+    // onPersonalDataChange callback, lalu disimpan di bookingData.nik.
     expect(queueService.bookQueueWizard).toHaveBeenCalledWith({
       perkara_id: 123,
-      nik: '',
+      nik: '3201234567890001',
       slot_time: '09:00',
     })
   })

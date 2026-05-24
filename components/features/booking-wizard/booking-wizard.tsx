@@ -91,10 +91,12 @@ export function BookingWizard() {
 
   /**
    * Handler untuk menyimpan data personal dari StepValidate.
-   * Akan dipakai oleh StepConfirm (Task 4.4) dan StepTicket (Task 4.5).
+   * NIK juga dipropagasi ke bookingData supaya StepConfirm dan StepTicket
+   * bisa menampilkan NIK yang diisi user (sebelumnya selalu kosong — bug).
    */
-  const handlePersonalData = (info: { nama: string; telepon: string }) => {
-    setPersonalData(info)
+  const handlePersonalData = (info: { nik: string; nama: string; telepon: string }) => {
+    setPersonalData({ nama: info.nama, telepon: info.telepon })
+    setBookingData((prev) => ({ ...prev, nik: info.nik }))
   }
 
   /**
@@ -157,7 +159,9 @@ export function BookingWizard() {
 
   /**
    * Handler ketika booking berhasil.
-   * Menampilkan tiket dan toast sukses.
+   * Menampilkan tiket di Step 4 (perforated layout) + toast sukses.
+   * Modal tetap terbuka — user yang menutup via tombol "Booking Lagi"
+   * (memanggil handleBookAgain) atau tombol close dialog.
    */
   const handleConfirmNext = (ticketData: QueueTicket) => {
     setTicket({
@@ -168,8 +172,6 @@ export function BookingWizard() {
     toast.success("Booking berhasil!", {
       description: `Nomor antrian Anda: ${ticketData.queue_number}`,
     })
-    // Close modal setelah booking berhasil
-    setIsOpen(false)
   }
 
   /**

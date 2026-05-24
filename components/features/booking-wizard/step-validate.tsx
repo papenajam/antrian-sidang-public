@@ -14,8 +14,8 @@ interface StepValidateProps {
   onNext: (data: NonNullable<ValidateResponse['data']>) => void
   onMultiPihak: (data: NonNullable<ValidateResponse['data']>) => void
   onError: (message: string) => void
-  /** Callback opsional untuk menyampaikan data personal ke parent wizard */
-  onPersonalDataChange?: (info: { nama: string; telepon: string }) => void
+  /** Callback opsional untuk menyampaikan data personal (NIK + nama + telepon) ke parent wizard */
+  onPersonalDataChange?: (info: { nik: string; nama: string; telepon: string }) => void
 }
 
 export function StepValidate({ onNext, onMultiPihak, onError, onPersonalDataChange }: StepValidateProps) {
@@ -93,8 +93,12 @@ export function StepValidate({ onNext, onMultiPihak, onError, onPersonalDataChan
           }
         }
 
-        // Sampaikan data personal ke parent wizard
-        onPersonalDataChange?.({ nama: nama.trim(), telepon: telepon.trim() })
+        // Sampaikan data personal (NIK + nama + telepon) ke parent wizard
+        onPersonalDataChange?.({
+          nik: nik.trim(),
+          nama: nama.trim(),
+          telepon: telepon.trim(),
+        })
 
         if (response.data.existing_queue) {
           onMultiPihak(response.data)
