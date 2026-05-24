@@ -128,3 +128,69 @@ describe('StepSelectSlot', () => {
     expect(onBack).toHaveBeenCalled()
   })
 })
+
+describe('StepSelectSlot — Layout', () => {
+  const defaultProps = {
+    perkaraId: 123,
+    tanggal: '2026-05-30',
+    onNext: vi.fn(),
+    onBack: vi.fn(),
+  }
+
+  const mockSlots: SlotInfo[] = [
+    { time: '09:00', capacity: 8, booked: 4, available: 4 },
+    { time: '10:00', capacity: 8, booked: 8, available: 0 },
+  ]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(queueService.getAvailableSlots).mockResolvedValue({
+      data: { tanggal: '2026-05-30', slots: mockSlots },
+    })
+  })
+
+  it('renders alert info about slot capacity', async () => {
+    render(<StepSelectSlot {...defaultProps} />)
+
+    // Tunggu sampai loading selesai dan slots muncul
+    await waitFor(() => {
+      expect(screen.getByText('09:00')).toBeInTheDocument()
+    })
+
+    // Alert info kapasitas slot harus terlihat
+    // Gunakan function matcher karena teks tersplit oleh elemen <strong>
+    // Cari elemen <p> yang mengandung teks tersebut
+    const alertElements = screen.getAllByText((_, element) =>
+      element?.tagName === 'P' &&
+      (element?.textContent ?? '').includes('Tiap slot menampung') &&
+      (element?.textContent ?? '').includes('8 antrian')
+    )
+    expect(alertElements.length).toBeGreaterThan(0)
+  })
+
+  it('renders date kicker in mono uppercase brackets', async () => {
+    render(<StepSelectSlot {...defaultProps} />)
+
+    // Tunggu sampai loading selesai
+    await waitFor(() => {
+      expect(screen.getByText('09:00')).toBeInTheDocument()
+    })
+
+    // Date kicker format bracket harus tampil
+    expect(screen.getByText(/\[ Slot tersedia ·/)).toBeInTheDocument()
+  })
+
+  it('uses sans font (not mono) for slot time display', async () => {
+    render(<StepSelectSlot {...defaultProps} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('09:00')).toBeInTheDocument()
+    })
+
+    // Cari elemen yang menampilkan waktu slot
+    const timeElement = screen.getByText('09:00')
+
+    // Elemen harus TIDAK menggunakan font-mono (pakai font-sans atau tidak ada class mono)
+    expect(timeElement.className).not.toContain('font-mono')
+  })
+})
