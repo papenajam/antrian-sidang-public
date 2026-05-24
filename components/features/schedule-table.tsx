@@ -1,53 +1,66 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Search, RefreshCw, Inbox } from "lucide-react"
 import { getTodaySchedule } from "@/lib/queue-service"
 import type { JadwalSidang } from "@/lib/api-types"
+import { parseParaPihak } from "@/lib/parse-para-pihak"
 import { toast } from "sonner"
 
 type ScheduleStatus = "scheduled" | "in_progress" | "completed" | "postponed"
 
+/** Model internal jadwal sidang setelah transform dari API */
 interface Schedule {
   id: string
   perkaraId: number
+  queueNumber: string | null
   caseNumber: string
+  caseType: string
   partyName: string
+  opposingParty: string | null
   time: string
   room: string
   agenda: string
   status: ScheduleStatus
 }
 
-/** Label & warna badge per status */
+/**
+ * Konfigurasi tampilan badge status sidang.
+ * Catatan token:
+ * - --primary-soft ada di globals.css
+ * - --accent-soft tidak ada → fallback bg-accent/10
+ * - --gold, --gold-soft ada di globals.css
+ */
 const STATUS_CONFIG: Record<
   ScheduleStatus,
-  { label: string; className: string }
+  { label: string; className: string; pipClass: string }
 > = {
   in_progress: {
-    label: "Berlangsung",
-    className:
-      "bg-accent/10 text-accent border-accent/20 dark:bg-accent/15 dark:text-accent",
+    label: "Sedang Berlangsung",
+    className: "bg-accent/10 text-accent border-accent/20 dark:bg-accent/15",
+    pipClass: "bg-accent",
   },
   scheduled: {
     label: "Terjadwal",
     className:
-      "bg-primary/8 text-primary border-primary/15 dark:bg-primary/15 dark:text-primary",
+      "bg-primary/8 text-primary border-primary/15 dark:bg-primary/15",
+    pipClass: "bg-primary",
   },
   completed: {
     label: "Selesai",
-    className:
-      "bg-success/8 text-success border-success/15 dark:bg-success/15 dark:text-success",
+    className: "bg-muted text-muted-foreground border-border",
+    pipClass: "bg-[var(--fg-4)]",
   },
   postponed: {
     label: "Ditunda",
     className:
-      "bg-destructive/8 text-destructive border-destructive/15 dark:bg-destructive/15 dark:text-destructive",
+      "bg-[var(--gold-soft)] text-[#92580a] border-[color-mix(in_oklab,var(--gold)_35%,transparent)] dark:bg-[rgba(244,210,122,.1)] dark:text-[var(--gold)]",
+    pipClass: "bg-[var(--gold)]",
   },
 }
 
-/** Filter tab chips */
+/** Definisi tab filter jadwal */
 const FILTER_TABS: {
   key: "all" | ScheduleStatus
   label: string
@@ -66,6 +79,7 @@ export function ScheduleTable() {
   const [activeFilter, setActiveFilter] = useState<"all" | ScheduleStatus>(
     "all"
   )
+  const [lastSync, setLastSync] = useState<string>("")
 
   /** Mapping status berdasarkan urutan index agar UI terlihat bervariasi */
   const mapStatusByIndex = (index: number): ScheduleStatus => {
@@ -75,28 +89,33 @@ export function ScheduleTable() {
     return "scheduled"
   }
 
-  /** Ekstraksi nama pihak dari string HTML */
-  const extractPartyName = (paraPihak: string | null): string => {
-    if (!paraPihak) return "-"
-    const cleanText = paraPihak.replace(/<[^>]*>/g, " ").trim()
-    return cleanText.split("  ")[0] || cleanText || "-"
+  /** Transform data API ke model Schedule internal menggunakan parseParaPihak */
+  const transformData = (data: JadwalSidang[]): Schedule[] =>
+    data.map((jadwal, index) => {
+      const { pihak, lawan } = parseParaPihak(jadwal.perkara?.para_pihak || null)
+      return {
+        id: jadwal.perkara_id.toString(),
+        perkaraId: jadwal.perkara_id,
+        queueNumber: jadwal.queue_number ?? null,
+        caseNumber: jadwal.perkara?.nomor_perkara || "-",
+        caseType: jadwal.perkara?.jenis_perkara_nama || "-",
+        partyName: pihak,
+        opposingParty: lawan,
+        time: jadwal.jam_sidang ? jadwal.jam_sidang.substring(0, 5) : "00:00",
+        room: jadwal.ruangan || "-",
+        agenda: jadwal.agenda || "-",
+        status: mapStatusByIndex(index),
+      }
+    })
+
+  /** Hitung jumlah jadwal per filter key */
+  const filterCount = (key: "all" | ScheduleStatus): number => {
+    if (key === "all") return schedules.length
+    return schedules.filter((s) => s.status === key).length
   }
 
-  /** Transform data API ke model Schedule internal */
-  const transformData = (data: JadwalSidang[]): Schedule[] =>
-    data.map((jadwal, index) => ({
-      id: jadwal.perkara_id.toString(),
-      perkaraId: jadwal.perkara_id,
-      caseNumber: jadwal.perkara?.nomor_perkara || "-",
-      partyName: extractPartyName(jadwal.perkara?.para_pihak || null),
-      time: jadwal.jam_sidang ? jadwal.jam_sidang.substring(0, 5) : "00:00",
-      room: jadwal.ruangan || "-",
-      agenda: jadwal.agenda || "-",
-      status: mapStatusByIndex(index),
-    }))
-
-  /** Fetch data dari API */
-  const fetchData = async (showToast = false) => {
+  /** Fetch data jadwal dari API */
+  const fetchData = useCallback(async (showToast = false) => {
     setIsLoading(true)
     try {
       const response = await getTodaySchedule()
@@ -105,6 +124,14 @@ export function ScheduleTable() {
         setSchedules([])
       } else {
         setSchedules(transformData(response.data))
+        // Catat waktu sinkronisasi terakhir
+        setLastSync(
+          new Date().toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          })
+        )
         if (showToast) toast.success("Jadwal berhasil dimuat ulang")
       }
     } catch (error) {
@@ -114,13 +141,15 @@ export function ScheduleTable() {
     } finally {
       setIsLoading(false)
     }
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     fetchData()
+    // Auto-refresh setiap 60 detik
     const interval = setInterval(() => fetchData(), 60000)
     return () => clearInterval(interval)
-  }, [])
+  }, [fetchData])
 
   /** Filter & search logic */
   const filteredSchedules = schedules.filter((s) => {
@@ -131,16 +160,18 @@ export function ScheduleTable() {
       !query ||
       s.caseNumber.toLowerCase().includes(query) ||
       s.partyName.toLowerCase().includes(query) ||
+      (s.opposingParty?.toLowerCase().includes(query) ?? false) ||
       s.room.toLowerCase().includes(query) ||
       s.agenda.toLowerCase().includes(query)
     return matchFilter && matchSearch
   })
 
-  // Skeleton loading
+  // Tampilkan skeleton saat loading pertama kali
   if (isLoading) {
     return (
       <div
         id="sec-jadwal"
+        data-section="schedule"
         className="rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-[var(--sh-sm)] md:p-8"
       >
         <Skeleton className="mb-6 h-6 w-44" />
@@ -156,15 +187,23 @@ export function ScheduleTable() {
   return (
     <section
       id="sec-jadwal"
+      data-section="schedule"
       className="rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-[var(--sh-sm)] md:p-8"
     >
-      {/* Header — Judul + Search + Refresh */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="!text-xl font-bold tracking-tight text-foreground">
-          Jadwal Sidang Hari Ini
-        </h2>
+      {/* Header — Kicker + Judul + Search + Refresh */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          {/* Kicker auto-refresh */}
+          <p className="inline-flex items-center gap-2 font-mono text-[.72rem] text-muted-foreground mb-2">
+            <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent animate-as-pulse" />
+            Auto-refresh tiap 60 detik
+          </p>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            Jadwal Sidang Hari Ini
+          </h2>
+        </div>
         <div className="flex items-center gap-2">
-          {/* Search */}
+          {/* Kolom pencarian */}
           <div className="relative flex-1 sm:w-56 sm:flex-initial">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
@@ -175,7 +214,7 @@ export function ScheduleTable() {
               className="w-full rounded-[var(--radius-md)] border border-border bg-background pl-9 pr-3 py-2 text-[.82rem] font-medium outline-none transition-all placeholder:text-muted-foreground/60 focus:border-primary focus:ring-1 focus:ring-ring"
             />
           </div>
-          {/* Refresh */}
+          {/* Tombol refresh manual */}
           <button
             onClick={() => fetchData(true)}
             className="grid h-9 w-9 place-items-center rounded-[var(--radius-md)] border border-border bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -186,8 +225,8 @@ export function ScheduleTable() {
         </div>
       </div>
 
-      {/* Filter chips */}
-      <div className="mt-5 flex flex-wrap gap-2 border-b border-border pb-5">
+      {/* Filter chips + sync timestamp */}
+      <div className="mt-5 flex flex-wrap items-center gap-2 border-b border-border pb-5">
         {FILTER_TABS.map((tab) => (
           <button
             key={tab.key}
@@ -199,11 +238,20 @@ export function ScheduleTable() {
             }`}
           >
             {tab.label}
+            {/* Jumlah item per filter */}
+            <span className="ml-1.5 opacity-60">[{filterCount(tab.key)}]</span>
           </button>
         ))}
+        {/* Chip timestamp sinkronisasi terakhir */}
+        {lastSync && (
+          <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-2.5 py-1 font-mono text-[.7rem] text-muted-foreground">
+            <RefreshCw className="h-3 w-3" />
+            Terakhir disinkron · {lastSync}
+          </span>
+        )}
       </div>
 
-      {/* Content */}
+      {/* Konten tabel */}
       <div className="mt-5">
         {filteredSchedules.length === 0 ? (
           /* Empty state */
@@ -234,14 +282,16 @@ export function ScheduleTable() {
             </button>
           </div>
         ) : (
-          /* Table grid — header (desktop) + rows */
+          /* Grid 7 kolom — header (desktop) + baris */
           <div>
-            {/* Desktop table header */}
-            <div className="mb-3 hidden grid-cols-[80px_1.4fr_1fr_100px_100px] gap-4 px-4 text-[.72rem] font-mono font-medium uppercase tracking-[.1em] text-muted-foreground md:grid">
-              <span>Waktu</span>
+            {/* Header kolom desktop — 7 kolom */}
+            <div className="mb-3 hidden md:grid grid-cols-[76px_1.4fr_1.3fr_96px_1.2fr_96px_130px] gap-0 px-4 text-[.68rem] font-mono font-medium uppercase tracking-[.06em] text-muted-foreground">
+              <span>Antrian</span>
               <span>Perkara</span>
+              <span>Para Pihak</span>
+              <span>Waktu</span>
               <span>Agenda</span>
-              <span>Ruang</span>
+              <span>Ruangan</span>
               <span className="text-right">Status</span>
             </div>
 
@@ -259,9 +309,9 @@ export function ScheduleTable() {
                         : "border-border bg-card hover:border-[color-mix(in_oklab,var(--border)_80%,var(--foreground)_20%)]"
                     }`}
                   >
-                    {/* Mobile layout */}
+                    {/* Layout mobile */}
                     <div className="flex items-start gap-3 md:hidden">
-                      {/* Jam */}
+                      {/* Jam sidang dalam kotak */}
                       <div
                         className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[var(--radius-md)] text-sm font-bold ${
                           isLive
@@ -277,20 +327,39 @@ export function ScheduleTable() {
                         </div>
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
+                        {/* Nomor perkara + nomor antrian + badge status */}
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="truncate text-sm font-semibold text-foreground">
                             {schedule.caseNumber}
                           </span>
-                          {/* Status pip */}
+                          {/* Pill nomor antrian (jika ada) */}
+                          {schedule.queueNumber && (
+                            <span className="flex-shrink-0 inline-flex items-center justify-center rounded-full bg-primary/10 text-primary border border-primary/15 px-2 py-0.5 font-mono text-[.7rem] font-semibold dark:bg-primary/15">
+                              {schedule.queueNumber}
+                            </span>
+                          )}
+                          {/* Badge status */}
                           <span
                             className={`flex-shrink-0 rounded-full border px-2.5 py-0.5 text-[.7rem] font-medium ${statusCfg.className}`}
                           >
                             {statusCfg.label}
                           </span>
                         </div>
+                        {/* Jenis perkara */}
+                        <div className="mt-0.5 truncate text-[.72rem] text-muted-foreground/70">
+                          {schedule.caseType}
+                        </div>
+                        {/* Nama pihak utama */}
                         <div className="mt-1 truncate text-[.78rem] text-muted-foreground">
                           {schedule.partyName}
                         </div>
+                        {/* Pihak lawan (jika ada) */}
+                        {schedule.opposingParty && (
+                          <div className="mt-0.5 truncate text-[.72rem] text-muted-foreground/70">
+                            vs. {schedule.opposingParty}
+                          </div>
+                        )}
+                        {/* Ruang + agenda */}
                         <div className="mt-1 flex items-center gap-3 text-[.72rem] text-muted-foreground/70">
                           <span>{schedule.room}</span>
                           {schedule.agenda !== "-" && (
@@ -300,37 +369,60 @@ export function ScheduleTable() {
                       </div>
                     </div>
 
-                    {/* Desktop grid layout */}
-                    <div className="hidden grid-cols-[80px_1.4fr_1fr_100px_100px] items-center gap-4 md:grid">
-                      {/* Jam */}
-                      <div className="font-mono text-[.88rem] font-semibold text-foreground">
-                        {schedule.time}
+                    {/* Layout desktop — grid 7 kolom */}
+                    <div className="hidden md:grid grid-cols-[76px_1.4fr_1.3fr_96px_1.2fr_96px_130px] items-center gap-0 px-2">
+                      {/* 1. Antrian — pill nomor antrian */}
+                      <div>
+                        {schedule.queueNumber ? (
+                          <span className="inline-flex items-center justify-center rounded-full bg-primary/10 text-primary border border-primary/15 px-2.5 py-1 font-mono text-[.78rem] font-semibold dark:bg-primary/15">
+                            {schedule.queueNumber}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/50 font-mono text-[.78rem]">
+                            —
+                          </span>
+                        )}
                       </div>
-                      {/* Perkara + pihak */}
+                      {/* 2. Perkara — nomor + jenis perkara */}
                       <div className="min-w-0">
                         <div className="truncate text-[.88rem] font-semibold text-foreground">
                           {schedule.caseNumber}
                         </div>
-                        <div className="truncate text-[.78rem] text-muted-foreground">
-                          {schedule.partyName}
+                        <div className="truncate text-[.72rem] text-muted-foreground">
+                          {schedule.caseType}
                         </div>
                       </div>
-                      {/* Agenda */}
+                      {/* 3. Para Pihak — pihak utama + pihak lawan */}
+                      <div className="min-w-0">
+                        <div className="truncate text-[.82rem] text-foreground">
+                          {schedule.partyName}
+                        </div>
+                        {schedule.opposingParty && (
+                          <div className="truncate text-[.72rem] text-muted-foreground">
+                            vs. {schedule.opposingParty}
+                          </div>
+                        )}
+                      </div>
+                      {/* 4. Waktu sidang */}
+                      <div className="font-mono text-[.88rem] font-semibold text-foreground">
+                        {schedule.time}
+                      </div>
+                      {/* 5. Agenda sidang */}
                       <div className="truncate text-[.82rem] text-muted-foreground">
                         {schedule.agenda}
                       </div>
-                      {/* Ruang */}
+                      {/* 6. Ruangan sidang */}
                       <div className="text-[.82rem] font-medium text-muted-foreground">
                         {schedule.room}
                       </div>
-                      {/* Status */}
+                      {/* 7. Status — badge dengan pip indicator */}
                       <div className="text-right">
                         <span
                           className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[.72rem] font-medium ${statusCfg.className}`}
                         >
-                          {isLive && (
-                            <span className="inline-block h-1.5 w-1.5 rounded-full bg-current animate-as-pulse" />
-                          )}
+                          <span
+                            className={`inline-block h-1.5 w-1.5 rounded-full ${statusCfg.pipClass} ${isLive ? "animate-as-pulse" : ""}`}
+                          />
                           {statusCfg.label}
                         </span>
                       </div>

@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { SlotCard } from "@/components/features/slot-card"
-import { Calendar, Clock, ArrowLeft, ArrowRight, Loader2, MapPin, AlertCircle } from "lucide-react"
+import { Calendar, Clock, ArrowLeft, ArrowRight, Loader2, MapPin, AlertCircle, Info } from "lucide-react"
 import { getAvailableSlots } from "@/lib/queue-service"
+import { formatDate } from "@/lib/utils"
 import type { SlotInfo } from "@/lib/api-types"
 
 interface StepSelectSlotProps {
@@ -48,17 +49,6 @@ export function StepSelectSlot({ perkaraId, tanggal, ruangan, onNext, onBack, cu
     }
   }
 
-  // Format tanggal untuk display
-  const formatTanggal = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString("id-ID", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    })
-  }
-
   const formatJam = () => {
     return lastRefresh.toLocaleTimeString("id-ID", {
       hour: "2-digit",
@@ -90,7 +80,7 @@ export function StepSelectSlot({ perkaraId, tanggal, ruangan, onNext, onBack, cu
                       Tanggal Sidang
                     </div>
                     <div className="truncate text-xs font-bold text-white sm:text-base">
-                      {formatTanggal(tanggal)}
+                      {formatDate(tanggal)}
                     </div>
                   </div>
                 </div>
@@ -132,6 +122,19 @@ export function StepSelectSlot({ perkaraId, tanggal, ruangan, onNext, onBack, cu
                 </div>
               ) : (
                 <>
+                  {/* Alert info kapasitas slot */}
+                  <div className="bg-primary/5 border border-primary/15 rounded-md p-3 flex items-start gap-2">
+                    <Info className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-muted-foreground">
+                      Tiap slot menampung <strong>8 antrian</strong>
+                    </p>
+                  </div>
+
+                  {/* Date kicker mono uppercase bracket */}
+                  <p className="font-mono text-[.72rem] uppercase tracking-[.06em] text-muted-foreground mb-3">
+                    [ Slot tersedia · {formatDate(tanggal)} ]
+                  </p>
+
                   {/* Header Slot Selection */}
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <h3 className="text-xs font-medium text-muted-foreground sm:text-sm">

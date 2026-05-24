@@ -11,7 +11,16 @@ interface TestMockResponse {
 
 vi.mock('@/lib/queue-service', () => ({
   bookQueueWizard: vi.fn(),
-  getAvailableSlots: vi.fn(),
+  getAvailableSlots: vi.fn().mockResolvedValue({
+    data: {
+      tanggal: '2026-05-23',
+      slots: [{ time: '10:00', capacity: 8, booked: 3, available: 5 }],
+    },
+  }),
+}))
+
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
 }))
 
 describe('StepConfirm', () => {
@@ -28,6 +37,23 @@ describe('StepConfirm', () => {
     onError: vi.fn(),
   }
 
+  // Props lengkap untuk menguji 8-field grid
+  const fullProps = {
+    perkaraId: 100,
+    nik: '3201234567890001',
+    namaPihak: 'Andre',
+    nomorPerkara: '0091/Pdt.G/2026/PA.Pnj',
+    jenisPerkara: 'Cerai Talak',
+    nama: 'Andre',
+    telepon: '081234567890',
+    tanggal: '2026-05-23T10:00:00',
+    slot: { time: '10:00', capacity: 8, booked: 3, available: 5 },
+    ruangan: 'Ruang 1',
+    onNext: vi.fn(),
+    onBack: vi.fn(),
+    onError: vi.fn(),
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -37,7 +63,8 @@ describe('StepConfirm', () => {
 
     expect(screen.getByText('123/Pdt.G/2024/PA.Pps')).toBeInTheDocument()
     expect(screen.getByText('Ahmad bin Ahmad')).toBeInTheDocument()
-    expect(screen.getByText(/09:00.*10:00/)).toBeInTheDocument()
+    // Layout baru: waktu ditampilkan sebagai "09:00 WITA" di sel Waktu Kedatangan
+    expect(screen.getByText('09:00 WITA')).toBeInTheDocument()
     expect(screen.getByText('Ruang Sidang 1')).toBeInTheDocument()
   })
 
@@ -92,6 +119,31 @@ describe('StepConfirm', () => {
 
     await waitFor(() => {
       expect(onError).toHaveBeenCalledWith('Terjadi kesalahan saat booking. Silakan coba lagi.')
+    })
+  })
+
+  describe('StepConfirm — 8 Field Review Grid', () => {
+    it('renders all 8 confirm rows', () => {
+      render(<StepConfirm {...fullProps} />)
+      expect(screen.getByText('Nomor Perkara')).toBeInTheDocument()
+      expect(screen.getByText('Jenis Perkara')).toBeInTheDocument()
+      expect(screen.getByText('Nama Pemohon')).toBeInTheDocument()
+      expect(screen.getByText('NIK')).toBeInTheDocument()
+      expect(screen.getByText('Waktu Kedatangan')).toBeInTheDocument()
+      expect(screen.getByText('Estimasi Antrian')).toBeInTheDocument()
+      expect(screen.getByText('Notifikasi')).toBeInTheDocument()
+      expect(screen.getByText('Tanggal Sidang')).toBeInTheDocument()
+    })
+
+    it('formats NIK with spaces every 4 digits', () => {
+      render(<StepConfirm {...fullProps} />)
+      expect(screen.getByText('3201 2345 6789 0001')).toBeInTheDocument()
+    })
+
+    it('renders posisi estimasi format', () => {
+      render(<StepConfirm {...fullProps} />)
+      // booked=3, posisi=4 dari 8
+      expect(screen.getByText(/Posisi ke-4 dari 8/)).toBeInTheDocument()
     })
   })
 })

@@ -36,12 +36,16 @@ describe('BookingWizard', () => {
 
   it('renders all 4 step labels in progress bar', () => {
     render(<BookingModalProvider><BookingWizard /></BookingModalProvider>)
-    // Gunakan queryAllByText karena "Validasi" muncul di progress bar dan StepValidate
+    // Gunakan queryAllByText karena setiap label bisa muncul 2x (versi desktop dan mobile)
+    // serta "Validasi" juga muncul di heading StepValidate
     const validasiElements = screen.queryAllByText(/validasi/i)
     expect(validasiElements.length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText(/pilih jam/i)).toBeInTheDocument()
-    expect(screen.getByText(/konfirmasi/i)).toBeInTheDocument()
-    expect(screen.getByText(/tiket/i)).toBeInTheDocument()
+    const pilihJamElements = screen.queryAllByText(/pilih jam/i)
+    expect(pilihJamElements.length).toBeGreaterThanOrEqual(1)
+    const konfirmasiElements = screen.queryAllByText(/konfirmasi/i)
+    expect(konfirmasiElements.length).toBeGreaterThanOrEqual(1)
+    const tiketElements = screen.queryAllByText(/tiket/i)
+    expect(tiketElements.length).toBeGreaterThanOrEqual(1)
   })
 
   it('navigates to step 2 after successful validation', async () => {
@@ -69,7 +73,9 @@ describe('BookingWizard', () => {
     const user = userEvent.setup()
     await user.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await user.type(screen.getByLabelText(/nik/i), '3201234567890001')
-    await user.click(screen.getByRole('button', { name: /anjutkan/i }))
+    // Isi nama sesuai pihak_nama agar SIPP cross-check tidak memunculkan window.confirm
+    await user.type(screen.getByLabelText(/nama lengkap/i), 'Ahmad')
+    await user.click(screen.getByRole('button', { name: /Verifikasi & Lanjut/i }))
 
     await waitFor(() => {
       expect(screen.getByText(/pilih jam sidang/i)).toBeInTheDocument()
@@ -105,7 +111,9 @@ describe('BookingWizard', () => {
     const user = userEvent.setup()
     await user.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await user.type(screen.getByLabelText(/nik/i), '3201234567890001')
-    await user.click(screen.getByRole('button', { name: /anjutkan/i }))
+    // Isi nama sesuai pihak_nama agar SIPP cross-check tidak memunculkan window.confirm
+    await user.type(screen.getByLabelText(/nama lengkap/i), 'Ahmad')
+    await user.click(screen.getByRole('button', { name: /Verifikasi & Lanjut/i }))
 
     await waitFor(() => {
       expect(screen.getByText('A-003')).toBeInTheDocument()

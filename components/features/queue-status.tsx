@@ -1,19 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { NumberTicker } from "@/components/magic/number-ticker"
+import { useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RescheduleDialog } from "./reschedule-dialog"
-import { getTodaySchedule, calculateQueueStatistics } from "@/lib/queue-service"
+import { CekStatusDialog } from "./cek-status-dialog"
+import { useCurrentCall } from "@/lib/hooks/use-current-call"
 import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
-interface QueueData {
-  currentNumber: number
-  waitingCount: number
-  processedToday: number
-  lastUpdated: string
-}
-
+/**
+ * Props untuk QueueStatus — mendukung mode dengan booking aktif
+ * agar tombol Ganti Jadwal bisa diaktifkan.
+ */
 interface QueueStatusProps {
   queueNumber?: string
   perkaraId?: number
@@ -22,6 +20,49 @@ interface QueueStatusProps {
   isActive?: boolean
 }
 
+/**
+ * Sub-komponen Cell untuk kolom kanan — menampilkan label, nilai, dan sublabel.
+ * Dipakai untuk Menunggu, Selesai, dan Berikutnya.
+ *
+ * Token fallback: valueClass mengasumsikan teks putih dari parent callup-gradient.
+ */
+function Cell({
+  label,
+  value,
+  sublabel,
+  valueClass,
+}: {
+  label: string
+  value: string
+  sublabel: string
+  valueClass: string
+}) {
+  return (
+    <div className="flex flex-col gap-1 border-b border-white/[.08] p-5 px-6 last:border-0">
+      {/* Label kategori kecil */}
+      <span className="text-[.72rem] font-medium uppercase tracking-[.04em] text-white/55">
+        {label}
+      </span>
+      {/* Nilai utama */}
+      <span className={cn("font-semibold leading-[1.15] text-white", valueClass)}>
+        {value}
+      </span>
+      {/* Sub-label deskriptif */}
+      <span className="text-[.72rem] text-white/45">{sublabel}</span>
+    </div>
+  )
+}
+
+/**
+ * Komponen utama QueueStatus — menampilkan status panggilan sidang secara live.
+ * Menggunakan useCurrentCall untuk data real-time dengan polling 30 detik.
+ *
+ * Kolom kiri: nomor antrian besar + detail perkara + action buttons.
+ * Kolom kanan: 3 cells — Menunggu, Selesai, Berikutnya.
+ *
+ * Token --gold-3 (#f4d27a, dark: sama) dipakai di gradient nomor antrian.
+ * Fallback: jika data null, tampilkan "—" dan pesan empty state.
+ */
 export function QueueStatus({
   queueNumber: propQueueNumber,
   perkaraId: propPerkaraId,
@@ -29,11 +70,16 @@ export function QueueStatus({
   tanggal: propTanggal,
   isActive = false,
 }: QueueStatusProps) {
-  const [data, setData] = useState<QueueData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [showReschedule, setShowReschedule] = useState(false)
-  const [hasData, setHasData] = useState(false)
+  // Data live dari hook — menggantikan useState + useEffect fetch lama
+  const { data, isLoading } = useCurrentCall()
 
+  // State dialog reschedule
+  const [showReschedule, setShowReschedule] = useState(false)
+
+  // State cek status — modal akan diimplementasikan di Task 3.3
+  const [showCekStatus, setShowCekStatus] = useState(false)
+
+  // Booking state untuk validasi tombol Ganti Jadwal
   const [bookingState] = useState<{
     queueNumber: string | null
     perkaraId: number | null
@@ -46,53 +92,14 @@ export function QueueStatus({
     tanggal: propTanggal || null,
   })
 
-  const fetchData = async () => {
-    try {
-      const scheduleResponse = await getTodaySchedule()
+  const hasActiveBooking = isActive || bookingState.queueNumber !== null
 
-      if (scheduleResponse.error) {
-        toast.error(scheduleResponse.error)
-        return
-      }
-
-      const statistics = calculateQueueStatistics(scheduleResponse.data, [])
-
-      // Periksa apakah data real tersedia
-      const hasRealData =
-        statistics.currentNumber > 0 ||
-        statistics.waitingCount > 0 ||
-        statistics.processedToday > 0 ||
-        scheduleResponse.data.length > 0
-
-      setHasData(hasRealData)
-      setData({
-        currentNumber: statistics.currentNumber,
-        waitingCount: statistics.waitingCount,
-        processedToday: statistics.processedToday,
-        lastUpdated: statistics.lastUpdated || "-",
-      })
-    } catch (error) {
-      toast.error("Gagal memuat status antrian")
-      console.error("Error fetching queue status:", error)
-    } finally {
-      setIsLoading(false)
-    }
+  /** Tangani klik Cek Status Saya — buka CekStatusDialog */
+  const handleCekStatus = () => {
+    setShowCekStatus(true)
   }
 
-  useEffect(() => {
-    fetchData()
-    const interval = setInterval(fetchData, 30000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const handleCheckStatus = () => {
-    if (bookingState.queueNumber) {
-      toast.info(`Cek status untuk: ${bookingState.queueNumber}`)
-    } else {
-      toast.info("Fitur cek status akan segera tersedia.")
-    }
-  }
-
+  /** Tangani klik Ganti Jadwal — buka RescheduleDialog jika booking aktif */
   const handleReschedule = () => {
     if (
       !bookingState.queueNumber ||
@@ -100,21 +107,23 @@ export function QueueStatus({
       !bookingState.currentSlot ||
       !bookingState.tanggal
     ) {
-      toast.warning(
-        "Fitur ganti jadwal tersedia setelah Anda melakukan booking"
-      )
+      toast.warning("Fitur ganti jadwal tersedia setelah Anda melakukan booking")
       return
     }
     setShowReschedule(true)
   }
 
-  const hasActiveBooking = isActive || bookingState.queueNumber !== null
+  // Hitung estimasi waktu tunggu: setiap nomor rata-rata 18 menit
+  const waitingCount = data?.waitingCount ?? 0
+  const doneCount = data?.doneCount ?? 0
+  const estimasiMenit = waitingCount * 18
 
-  // Skeleton loading
+  // ── Loading state: skeleton sederhana ──────────────────────────────────────
   if (isLoading) {
     return (
       <div
         id="sec-status"
+        data-section="queue-status"
         className="callup-gradient overflow-hidden rounded-[var(--radius-2xl)] p-6 md:p-10"
       >
         <div className="grid grid-cols-1 gap-6 md:grid-cols-[1.4fr_1fr]">
@@ -132,7 +141,8 @@ export function QueueStatus({
     <>
       <section
         id="sec-status"
-        className="callup-gradient relative overflow-hidden rounded-[var(--radius-2xl)] p-6 md:p-10"
+        data-section="queue-status"
+        className="callup-gradient relative overflow-hidden rounded-[var(--radius-2xl)]"
       >
         {/* Ambient glow di balik konten */}
         <div
@@ -144,124 +154,114 @@ export function QueueStatus({
           aria-hidden="true"
         />
 
-        <div className="relative z-10 grid grid-cols-1 gap-6 md:grid-cols-[1.4fr_1fr]">
-          {/* ── KOLOM KIRI — Panggilan aktif ── */}
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5">
-                <div className="h-2 w-2 animate-as-pulse rounded-full bg-accent" />
-                <span className="text-[.78rem] font-medium uppercase tracking-wide text-white/70">
-                  Live · Panggilan Aktif
-                </span>
-              </div>
-              {data?.lastUpdated && data.lastUpdated !== "-" && (
-                <span className="rounded-full bg-white/5 px-2.5 py-1 text-[.7rem] font-mono text-white/40">
-                  {data.lastUpdated}
-                </span>
-              )}
-            </div>
-
-            {/* Nomor antrian besar */}
-            <div className="flex-1 flex flex-col items-center justify-center rounded-[var(--radius-xl)] bg-white/[.04] border border-white/[.08] p-8 text-center">
-              <div className="text-[clamp(64px,8vw,120px)] font-bold leading-none tracking-[-0.04em] text-gradient-gold drop-shadow-[0_2px_10px_rgba(212,160,23,.35)]">
-                {!hasData && data?.currentNumber === 0 ? (
-                  <span className="text-white/30">—</span>
-                ) : (
-                  <NumberTicker
-                    value={data?.currentNumber || 0}
-                    duration={1.5}
-                    showDashForZero={true}
-                  />
+        <div className="relative z-10 grid grid-cols-1 md:grid-cols-[1.4fr_1fr]">
+          {/* ── KOLOM KIRI — Panggilan aktif ─────────────────────────────── */}
+          <div className="flex flex-col gap-3 p-6 md:p-10">
+            {/* Tag pill: status live vs tidak aktif */}
+            <span className="inline-flex items-center gap-2 self-start rounded-full border border-accent/40 bg-accent/15 px-3.5 py-1.5 font-mono text-[.72rem] uppercase tracking-[.04em] text-orange-300">
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full bg-accent",
+                  data?.current && "animate-as-pulse"
                 )}
-              </div>
-              <span className="mt-3 inline-flex items-center gap-2 font-mono text-[.82rem] font-medium text-white/50">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent animate-as-pulse" />
-                Nomor Antrian Saat Ini
-              </span>
-            </div>
-          </div>
+              />
+              {data?.current ? "Sedang Dipanggil" : "Tidak ada panggilan aktif"}
+            </span>
 
-          {/* ── KOLOM KANAN — Ringkasan ── */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-1">
-            {/* Menunggu */}
-            <div className="rounded-[var(--radius-lg)] bg-white/[.04] border border-white/[.08] p-5">
-              <div className="flex items-center gap-2 text-[.78rem] font-medium text-white/50">
-                <span className="h-2 w-2 rounded-full bg-[var(--gold)]" />
-                Antrian Menunggu
-              </div>
-              <div className="mt-2 text-[clamp(32px,3vw,44px)] font-bold leading-none tracking-[-0.04em] text-white">
-                {!hasData && data?.waitingCount === 0 ? (
-                  <span className="text-white/30">—</span>
-                ) : (
-                  <NumberTicker
-                    value={data?.waitingCount || 0}
-                    duration={1}
-                    showDashForZero={true}
-                  />
-                )}
-              </div>
-              <div className="mt-1 text-[.72rem] text-white/35 font-mono">
-                Estimasi 15-20 menit per nomor
-              </div>
+            {/* Nomor antrian HUGE — gradient gold-3 ke putih */}
+            {/* Token: --gold-3 (#f4d27a light, #f4d27a dark — sama) */}
+            <div
+              className="bg-clip-text text-transparent font-bold leading-[.9] tracking-[-.06em]"
+              style={{
+                fontSize: "clamp(80px, 12vw, 180px)",
+                backgroundImage:
+                  "linear-gradient(180deg, #fff 0%, var(--gold-3) 100%)",
+              }}
+            >
+              {data?.current?.queueNumber || "—"}
             </div>
 
-            {/* Selesai */}
-            <div className="rounded-[var(--radius-lg)] bg-white/[.04] border border-white/[.08] p-5">
-              <div className="flex items-center gap-2 text-[.78rem] font-medium text-white/50">
-                <span className="h-2 w-2 rounded-full bg-success" />
-                Selesai Hari Ini
-              </div>
-              <div className="mt-2 text-[clamp(32px,3vw,44px)] font-bold leading-none tracking-[-0.04em] text-white">
-                {!hasData && data?.processedToday === 0 ? (
-                  <span className="text-white/30">—</span>
-                ) : (
-                  <NumberTicker
-                    value={data?.processedToday || 0}
-                    duration={1}
-                    showDashForZero={true}
-                  />
-                )}
-              </div>
-              <div className="mt-1 text-[.72rem] text-white/35 font-mono">
-                Sidang yang sudah dipanggil
-              </div>
-            </div>
+            {/* Detail pihak berperkara — hanya ditampilkan jika ada panggilan aktif */}
+            {data?.current ? (
+              <>
+                <div>
+                  {/* Nama pihak dan lawan */}
+                  <div className="text-xl font-semibold leading-[1.25] text-white">
+                    {data.current.pihak}
+                    {data.current.lawan && (
+                      <span className="opacity-60"> vs. {data.current.lawan}</span>
+                    )}
+                  </div>
+                  {/* Nomor perkara dan jenis */}
+                  <div className="mt-1.5 font-mono text-[.82rem] text-white/60">
+                    {data.current.nomorPerkara} · {data.current.jenis}
+                  </div>
+                </div>
 
-            {/* Tombol aksi */}
-            <div className="grid grid-cols-2 gap-3 sm:col-span-2 md:col-span-1">
+                {/* Meta: ruang · agenda · waktu mulai — satu elemen untuk kemudahan testing */}
+                <div className="mt-auto pt-4 text-[.9rem] font-medium text-white/75">
+                  {`${data.current.ruang} · ${data.current.agenda} · Mulai pukul ${data.current.waktu} WITA`}
+                </div>
+              </>
+            ) : (
+              /* Empty state: tidak ada panggilan aktif */
+              <p className="text-white/55">Menunggu jadwal sidang berikutnya</p>
+            )}
+
+            {/* Action buttons */}
+            <div className="mt-4 flex gap-2.5">
               <button
-                onClick={handleCheckStatus}
-                className="rounded-[var(--radius-md)] border border-white/10 bg-white/5 px-4 py-3 text-[.82rem] font-medium text-white/80 transition-all duration-200 hover:bg-white/10 cursor-pointer"
+                onClick={handleCekStatus}
+                className="flex-1 rounded-[var(--radius-xl)] border border-white/[.18] bg-white/[.04] px-4 py-3 text-[.82rem] font-medium text-white/90 backdrop-blur-md transition-colors hover:bg-white/10"
               >
-                Cek Status
+                Cek Status Saya
               </button>
               <button
                 onClick={handleReschedule}
                 disabled={!hasActiveBooking}
-                className="rounded-[var(--radius-md)] border border-[var(--gold)]/20 bg-[var(--gold)]/10 px-4 py-3 text-[.82rem] font-medium text-[var(--gold)] transition-all duration-200 hover:bg-[var(--gold)]/20 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-                title={
-                  !hasActiveBooking
-                    ? "Fitur ganti jadwal tersedia setelah booking"
-                    : ""
-                }
+                className="flex-1 rounded-[var(--radius-xl)] border border-white/[.18] bg-white/[.04] px-4 py-3 text-[.82rem] font-medium text-white/90 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Ganti Jadwal
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Info jika belum ada data */}
-        {!hasData && (
-          <div className="relative z-10 mt-6 flex items-center gap-3 rounded-[var(--radius-md)] bg-white/[.04] border border-white/[.08] p-4">
-            <span className="text-[.82rem] text-white/50">
-              Belum ada data antrian hari ini — data muncul otomatis setelah ada pendaftaran.
-            </span>
+          {/* ── KOLOM KANAN — 3 cells ringkasan ──────────────────────────── */}
+          <div className="relative z-10 grid grid-rows-3 border-t border-white/[.08] md:border-l md:border-t-0">
+            {/* Cell Menunggu */}
+            <Cell
+              label="Menunggu"
+              value={String(waitingCount)}
+              sublabel={`Estimasi tunggu ±${estimasiMenit} menit`}
+              valueClass="text-[2rem]"
+            />
+            {/* Cell Selesai */}
+            <Cell
+              label="Selesai"
+              value={String(doneCount)}
+              sublabel="Rata-rata 16 menit/sidang"
+              valueClass="text-[2rem]"
+            />
+            {/* Cell Berikutnya */}
+            <Cell
+              label="Berikutnya"
+              value={
+                data?.next
+                  ? `${data.next.queueNumber} · ${data.next.ruang}`
+                  : "—"
+              }
+              sublabel={
+                data?.next
+                  ? `±${data.next.waktu} WITA · ${data.next.agenda}`
+                  : "Belum ada"
+              }
+              valueClass="text-[1.05rem]"
+            />
           </div>
-        )}
+        </div>
       </section>
 
-      {/* Dialog ganti jadwal */}
+      {/* Dialog ganti jadwal — hanya dirender jika booking state lengkap */}
       {bookingState.queueNumber &&
         bookingState.perkaraId &&
         bookingState.currentSlot &&
@@ -274,11 +274,13 @@ export function QueueStatus({
             currentSlot={bookingState.currentSlot}
             tanggal={bookingState.tanggal}
             onSuccess={() => {
-              fetchData()
               toast.success("Jadwal berhasil diubah!")
             }}
           />
         )}
+
+      {/* Dialog cek status antrian berdasarkan nomor antrian */}
+      <CekStatusDialog open={showCekStatus} onOpenChange={setShowCekStatus} />
     </>
   )
 }

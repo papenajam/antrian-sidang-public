@@ -19,35 +19,37 @@ interface BookingData {
   nik: string
   namaPihak: string
   nomorPerkara: string
+  /** Jenis perkara dari data validasi SIPP */
+  jenisPerkara: string
   tanggal: string
   ruangan: string
   selectedSlot: SlotInfo | null
 }
 
 const WIZARD_STEPS = [
-  { id: "validate", title: "Validasi" },
-  { id: "select-slot", title: "Pilih Jam" },
-  { id: "confirm", title: "Konfirmasi" },
-  { id: "ticket", title: "Tiket" },
+  { id: 1, label: "Validasi" },
+  { id: 2, label: "Pilih Jam" },
+  { id: 3, label: "Konfirmasi" },
+  { id: 4, label: "Tiket" },
 ]
 
 /**
- * Mendapatkan indeks progress bar berdasarkan langkah saat ini.
+ * Mendapatkan nomor progress (1-based) berdasarkan langkah wizard saat ini.
  */
 function getProgressStep(step: Step): number {
   switch (step) {
     case 1:
-      return 0
-    case 2:
       return 1
-    case 3:
+    case 2:
       return 2
-    case 4:
+    case 3:
       return 3
+    case 4:
+      return 4
     case 'existing-queue':
-      return 1 // Existing queue dianggap setelah validasi
+      return 2 // setelah validasi
     default:
-      return 0
+      return 1
   }
 }
 
@@ -56,6 +58,7 @@ const INITIAL_BOOKING_DATA: BookingData = {
   nik: "",
   namaPihak: "",
   nomorPerkara: "",
+  jenisPerkara: "",
   tanggal: "",
   ruangan: "",
   selectedSlot: null,
@@ -71,6 +74,7 @@ function mapValidationToBooking(data: NonNullable<ValidateResponse['data']>, pre
     perkaraId: data.perkara_id,
     namaPihak: data.pihak_nama,
     nomorPerkara: data.jadwal.perkara?.nomor_perkara || prev.nomorPerkara,
+    jenisPerkara: data.jadwal.perkara?.jenis_perkara_nama || prev.jenisPerkara,
     tanggal: data.jadwal.waktu,
     ruangan: data.jadwal.ruangan,
   }
@@ -81,7 +85,19 @@ export function BookingWizard() {
   const [bookingData, setBookingData] = useState<BookingData>(INITIAL_BOOKING_DATA)
   const [ticket, setTicket] = useState<(QueueTicket & { slot_time: string }) | null>(null)
   const [existingQueue, setExistingQueue] = useState<ExistingQueue | null>(null)
+  // personalData dipakai oleh StepConfirm dan StepTicket (Task 4.5)
+  const [personalData, setPersonalData] = useState<{ nama: string; telepon: string } | null>(null)
   const { setIsOpen } = useBookingModal()
+
+  /**
+   * Handler untuk menyimpan data personal dari StepValidate.
+   * NIK juga dipropagasi ke bookingData supaya StepConfirm dan StepTicket
+   * bisa menampilkan NIK yang diisi user (sebelumnya selalu kosong — bug).
+   */
+  const handlePersonalData = (info: { nik: string; nama: string; telepon: string }) => {
+    setPersonalData({ nama: info.nama, telepon: info.telepon })
+    setBookingData((prev) => ({ ...prev, nik: info.nik }))
+  }
 
   /**
    * Handler ketika validasi berhasil dan tidak ada existing queue.
@@ -143,7 +159,9 @@ export function BookingWizard() {
 
   /**
    * Handler ketika booking berhasil.
-   * Menampilkan tiket dan toast sukses.
+   * Menampilkan tiket di Step 4 (perforated layout) + toast sukses.
+   * Modal tetap terbuka — user yang menutup via tombol "Booking Lagi"
+   * (memanggil handleBookAgain) atau tombol close dialog.
    */
   const handleConfirmNext = (ticketData: QueueTicket) => {
     setTicket({
@@ -154,8 +172,6 @@ export function BookingWizard() {
     toast.success("Booking berhasil!", {
       description: `Nomor antrian Anda: ${ticketData.queue_number}`,
     })
-    // Close modal setelah booking berhasil
-    setIsOpen(false)
   }
 
   /**
@@ -174,6 +190,7 @@ export function BookingWizard() {
     setBookingData(INITIAL_BOOKING_DATA)
     setTicket(null)
     setExistingQueue(null)
+    setPersonalData(null)
     // Close modal agar user bisa buka lagi via FAB atau HeroSection
     setIsOpen(false)
   }
@@ -201,7 +218,7 @@ export function BookingWizard() {
       {/* Progress Bar */}
       <div 
         role="progressbar" 
-        aria-valuenow={progressStep + 1} 
+        aria-valuenow={progressStep}
         aria-valuemin={1} 
         aria-valuemax={4}
         className="mb-8"
@@ -217,6 +234,7 @@ export function BookingWizard() {
               onNext={handleValidateNext}
               onMultiPihak={handleMultiPihak}
               onError={handleValidateError}
+              onPersonalDataChange={handlePersonalData}
             />
           </BlurFade>
         )}
@@ -252,6 +270,9 @@ export function BookingWizard() {
               nik={bookingData.nik}
               namaPihak={bookingData.namaPihak}
               nomorPerkara={bookingData.nomorPerkara}
+              jenisPerkara={bookingData.jenisPerkara}
+              nama={personalData?.nama}
+              telepon={personalData?.telepon}
               tanggal={bookingData.tanggal}
               slot={bookingData.selectedSlot}
               ruangan={bookingData.ruangan}
@@ -269,6 +290,7 @@ export function BookingWizard() {
                 ...ticket,
                 tanggal: bookingData.tanggal ? bookingData.tanggal.split("T")[0] : undefined,
               }}
+              telepon={personalData?.telepon}
               onCheckStatus={handleCheckStatus}
               onBookAgain={handleBookAgain}
             />

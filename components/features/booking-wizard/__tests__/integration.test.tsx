@@ -26,11 +26,11 @@ vi.mock('@/components/magic/blur-fade', () => ({
 
 // Mock FormProgress agar tidak perlu render progress bar kompleks
 vi.mock('@/components/features/form-progress', () => ({
-  FormProgress: ({ steps, currentStep }: { steps: Array<{ id: string; title: string }>; currentStep: number }) => (
+  FormProgress: ({ steps, currentStep }: { steps: Array<{ id: number; label: string }>; currentStep: number }) => (
     <div data-testid="form-progress">
-      {steps.map((step, index) => (
-        <span key={step.id} data-active={index === currentStep}>
-          {step.title}
+      {steps.map((step) => (
+        <span key={step.id} data-active={step.id === currentStep}>
+          {step.label}
         </span>
       ))}
     </div>
@@ -95,12 +95,14 @@ describe('BookingWizard Integration', () => {
     const user = userEvent.setup()
     await user.type(nomorPerkaraInput, '123/Pdt.G/2024/PA.Pps')
     await user.type(nikInput, '3201234567890001')
+    // Isi nama sesuai pihak_nama agar SIPP cross-check tidak memunculkan window.confirm
+    await user.type(screen.getByLabelText(/nama lengkap/i), 'Ahmad')
 
     // Verifikasi input terisi dengan benar sebelum submit
     expect(nomorPerkaraInput).toHaveValue('123/Pdt.G/2024/PA.Pps')
     expect(nikInput).toHaveValue('3201234567890001')
 
-    fireEvent.click(screen.getByRole('button', { name: /anjutkan/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Verifikasi & Lanjut/i }))
 
     // Step 2: Pilih slot
     await waitFor(() => {
@@ -141,12 +143,11 @@ describe('BookingWizard Integration', () => {
     })
     expect(queueService.getAvailableSlots).toHaveBeenCalledWith(123, '2026-05-30T09:00:00')
 
-    // NOTE: bookingData.nik saat ini selalu kosong karena StepValidate tidak
-    // mengirimkan nik ke parent. Bug ini perlu diperbaiki di komponen BookingWizard
-    // dengan menambahkan callback untuk mengirim nik dari StepValidate.
+    // NIK dari StepValidate dipropagasi ke BookingWizard via
+    // onPersonalDataChange callback, lalu disimpan di bookingData.nik.
     expect(queueService.bookQueueWizard).toHaveBeenCalledWith({
       perkara_id: 123,
-      nik: '',
+      nik: '3201234567890001',
       slot_time: '09:00',
     })
   })

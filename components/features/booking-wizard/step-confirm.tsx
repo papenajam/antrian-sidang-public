@@ -4,8 +4,9 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BlurFade } from "@/components/magic/blur-fade"
-import { CheckCircle, ArrowLeft, Loader2, AlertTriangle, Calendar, Clock, MapPin, FileText, User, RefreshCw, AlertOctagon } from "lucide-react"
+import { CheckCircle, ArrowLeft, Loader2, AlertTriangle, RefreshCw, AlertOctagon } from "lucide-react"
 import { bookQueueWizard, getAvailableSlots } from "@/lib/queue-service"
+import { cn, formatDate } from "@/lib/utils"
 import type { SlotInfo, QueueTicket } from "@/lib/api-types"
 
 interface StepConfirmProps {
@@ -13,6 +14,12 @@ interface StepConfirmProps {
   nik: string
   namaPihak: string
   nomorPerkara: string
+  /** Jenis perkara dari data validasi (opsional) */
+  jenisPerkara?: string
+  /** Nama pemohon dari data personal — fallback ke namaPihak */
+  nama?: string
+  /** Nomor telepon untuk notifikasi WhatsApp (opsional) */
+  telepon?: string
   tanggal: string
   slot: SlotInfo
   ruangan: string
@@ -21,11 +28,54 @@ interface StepConfirmProps {
   onError: (message: string) => void
 }
 
+/**
+ * Format NIK 16 digit dengan spasi setiap 4 digit.
+ * Contoh: "3201234567890001" → "3201 2345 6789 0001"
+ */
+function formatNIK(nik: string): string {
+  return nik.replace(/(\d{4})(?=\d)/g, "$1 ")
+}
+
+interface ConfirmCellProps {
+  label: string
+  value: string
+  /** Apakah sel ini memiliki border bawah (untuk baris yang bukan terakhir) */
+  borderBottom?: boolean
+  /** Apakah sel ini memiliki border kanan di layar sm ke atas (untuk kolom kiri) */
+  borderRight?: boolean
+}
+
+/**
+ * Sel individual dalam grid review konfirmasi.
+ * Menampilkan label kecil di atas dan nilai yang menonjol di bawah.
+ */
+function ConfirmCell({ label, value, borderBottom, borderRight }: ConfirmCellProps) {
+  return (
+    <div
+      className={cn(
+        "p-4 flex flex-col gap-0.5",
+        borderBottom && "border-b border-border",
+        borderRight && "sm:border-r border-border"
+      )}
+    >
+      <span className="text-[.7rem] uppercase tracking-[.04em] font-medium text-muted-foreground">
+        {label}
+      </span>
+      <span className="text-[.9rem] font-medium text-foreground break-words">
+        {value}
+      </span>
+    </div>
+  )
+}
+
 export function StepConfirm({
   perkaraId,
   nik,
   namaPihak,
   nomorPerkara,
+  jenisPerkara,
+  nama,
+  telepon,
   tanggal,
   slot,
   ruangan,
@@ -34,14 +84,14 @@ export function StepConfirm({
   onError,
 }: StepConfirmProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
-  // Race condition handling - slot availability state
+  // Race condition handling - state ketersediaan slot
   const [slotStatus, setSlotStatus] = useState<{
     isAvailable: boolean
     lastChecked: Date | null
     isChecking: boolean
   }>({ isAvailable: true, lastChecked: null, isChecking: false })
 
-  // Cek ketersediaan slot setiap 30 detik
+  // Cek ketersediaan slot setiap 30 detik untuk menghindari race condition
   useEffect(() => {
     async function checkSlotAvailability() {
       setSlotStatus((prev) => ({ ...prev, isChecking: true }))
@@ -59,26 +109,14 @@ export function StepConfirm({
       }
     }
 
-    // Initial check
+    // Pengecekan awal saat komponen mount
     checkSlotAvailability()
 
-    // Refresh setiap 30 detik
+    // Refresh berkala setiap 30 detik
     const interval = setInterval(checkSlotAvailability, 30000)
     return () => clearInterval(interval)
   }, [perkaraId, tanggal, slot.time])
 
-  const endHour = parseInt(slot.time.split(":")[0], 10) + 1
-  const endTime = `${endHour.toString().padStart(2, "0")}:00`
-
-  const formatTanggal = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString("id-ID", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    })
-  }
 
   const handleConfirm = async () => {
     setIsSubmitting(true)
@@ -98,65 +136,87 @@ export function StepConfirm({
     }
   }
 
+  // Hitung posisi estimasi antrian (booked + 1 = posisi berikutnya)
+  const posisiAntrian = slot.booked + 1
+
   return (
     <BlurFade>
       <Card>
         <CardHeader>
+          {/* Kicker pill langkah */}
+          <div className="mb-1">
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-[.7rem] font-medium text-primary uppercase tracking-[.04em]">
+              Langkah 3 dari 4 · Tinjau &amp; Konfirmasi
+            </span>
+          </div>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-primary" />
             Konfirmasi Booking
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* RINGKASAN BOOKING dengan Visual Hierarchy yang Kuat */}
-          <div className="rounded-xl border-2 border-primary/20 overflow-hidden">
-            {/* Header: Jadwal (Paling Penting) - Gradient Background */}
-            <div className="bg-gradient-to-r from-primary to-primary/80 p-3 text-white sm:p-5">
-              <div className="text-[10px] font-medium uppercase tracking-wider text-white/70 mb-1 sm:text-xs sm:mb-2">
-                Jadwal Sidang Anda
-              </div>
-              <div className="text-lg font-bold sm:text-2xl">{formatTanggal(tanggal)}</div>
-              <div className="mt-2 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-                <div className="flex items-center gap-1.5 rounded-lg bg-white/20 px-2 py-1 sm:px-3 sm:py-1.5">
-                  <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="text-xs font-bold sm:text-sm">{slot.time} — {endTime}</span>
-                </div>
-                <div className="flex items-center gap-1.5 rounded-lg bg-secondary px-2 py-1 sm:px-3 sm:py-1.5">
-                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="text-xs font-bold text-secondary-foreground sm:text-sm">{ruangan}</span>
-                </div>
-              </div>
+          {/* Grid review 2 kolom dengan 8 field */}
+          <div className="rounded-xl border border-border overflow-hidden">
+            {/* Header lokasi dan ruangan */}
+            <div className="bg-primary/5 border-b border-border px-4 py-2.5 flex items-center gap-2">
+              <span className="text-xs font-semibold text-primary">{ruangan}</span>
             </div>
 
-            {/* Body: Detail Perkara */}
-            <div className="p-3 space-y-3 sm:p-5 sm:space-y-4">
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-muted sm:h-10 sm:w-10">
-                  <FileText className="h-4 w-4 text-muted-foreground sm:h-5 sm:w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">
-                    Nomor Perkara
-                  </div>
-                  <div className="truncate text-sm font-semibold sm:text-base">{nomorPerkara}</div>
-                </div>
-              </div>
+            {/* Grid 2-kolom untuk 8 field review */}
+            <div className="grid grid-cols-1 sm:grid-cols-2">
+              {/* Baris 1: Nomor Perkara | Jenis Perkara */}
+              <ConfirmCell
+                label="Nomor Perkara"
+                value={nomorPerkara}
+                borderBottom
+                borderRight
+              />
+              <ConfirmCell
+                label="Jenis Perkara"
+                value={jenisPerkara || "—"}
+                borderBottom
+              />
 
-              <div className="flex items-center gap-2 sm:gap-3">
-                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-muted sm:h-10 sm:w-10">
-                  <User className="h-4 w-4 text-muted-foreground sm:h-5 sm:w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">
-                    Nama Pihak
-                  </div>
-                  <div className="truncate text-sm font-semibold sm:text-base">{namaPihak}</div>
-                </div>
-              </div>
+              {/* Baris 2: Nama Pemohon | NIK */}
+              <ConfirmCell
+                label="Nama Pemohon"
+                value={nama || namaPihak}
+                borderBottom
+                borderRight
+              />
+              <ConfirmCell
+                label="NIK"
+                value={formatNIK(nik)}
+                borderBottom
+              />
+
+              {/* Baris 3: Waktu Kedatangan | Estimasi Antrian */}
+              <ConfirmCell
+                label="Waktu Kedatangan"
+                value={`${slot.time} WITA`}
+                borderBottom
+                borderRight
+              />
+              <ConfirmCell
+                label="Estimasi Antrian"
+                value={`Posisi ke-${posisiAntrian} dari ${slot.capacity}`}
+                borderBottom
+              />
+
+              {/* Baris 4: Notifikasi | Tanggal Sidang */}
+              <ConfirmCell
+                label="Notifikasi"
+                value={telepon || "—"}
+                borderRight
+              />
+              <ConfirmCell
+                label="Tanggal Sidang"
+                value={formatDate(tanggal)}
+              />
             </div>
           </div>
 
-          {/* Slot Availability Warning - Race Condition Handling */}
+          {/* Race condition handling - pengecekan ketersediaan slot */}
           {slotStatus.isChecking ? (
             <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 sm:p-4">
               <RefreshCw className="h-4 w-4 animate-spin text-blue-600 sm:h-5 sm:w-5" />
@@ -183,7 +243,7 @@ export function StepConfirm({
             </div>
           )}
 
-          {/* Warning dengan Emphasis */}
+          {/* Peringatan penting sebelum konfirmasi */}
           <div className="flex items-start gap-2 rounded-xl border-2 border-yellow-200 bg-yellow-50 p-3 sm:gap-3 sm:p-4">
             <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-yellow-600 sm:h-5 sm:w-5" />
             <div className="text-xs text-yellow-800 sm:text-sm">
@@ -196,7 +256,7 @@ export function StepConfirm({
             </div>
           </div>
 
-          {/* Navigation */}
+          {/* Navigasi wizard */}
           <div className="flex justify-between pt-3 border-t sm:pt-4">
             <Button variant="outline" onClick={onBack} disabled={isSubmitting} size="sm" className="text-xs sm:text-sm sm:size-default">
               <ArrowLeft className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />

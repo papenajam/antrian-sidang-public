@@ -14,17 +14,32 @@ interface StepValidateProps {
   onNext: (data: NonNullable<ValidateResponse['data']>) => void
   onMultiPihak: (data: NonNullable<ValidateResponse['data']>) => void
   onError: (message: string) => void
+  /** Callback opsional untuk menyampaikan data personal (NIK + nama + telepon) ke parent wizard */
+  onPersonalDataChange?: (info: { nik: string; nama: string; telepon: string }) => void
 }
 
-export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProps) {
+export function StepValidate({ onNext, onMultiPihak, onError, onPersonalDataChange }: StepValidateProps) {
   const [nomorPerkara, setNomorPerkara] = useState("")
   const [nik, setNik] = useState("")
+  const [nama, setNama] = useState("")
+  const [telepon, setTelepon] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [errors, setErrors] = useState<{ nomorPerkara?: string; nik?: string; api?: string }>({})
-  const [touched, setTouched] = useState({ nomorPerkara: false, nik: false })
+  const [errors, setErrors] = useState<{
+    nomorPerkara?: string
+    nik?: string
+    nama?: string
+    telepon?: string
+    api?: string
+  }>({})
+  const [touched, setTouched] = useState({
+    nomorPerkara: false,
+    nik: false,
+    nama: false,
+    telepon: false,
+  })
 
   const validate = (): boolean => {
-    const newErrors: { nomorPerkara?: string; nik?: string } = {}
+    const newErrors: typeof errors = {}
 
     if (!nomorPerkara.trim()) {
       newErrors.nomorPerkara = "Nomor perkara wajib diisi"
@@ -36,13 +51,22 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
       newErrors.nik = "NIK harus 16 digit angka"
     }
 
+    if (!nama.trim()) {
+      newErrors.nama = "Nama lengkap wajib diisi"
+    }
+
+    // Validasi telepon hanya jika diisi (opsional)
+    if (telepon.trim() && !/^08\d{8,12}$/.test(telepon.trim())) {
+      newErrors.telepon = "Format nomor tidak valid. Gunakan format 08xxxxxxxx"
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
 
   const handleSubmit = async (e: SubmitEvent) => {
     e.preventDefault()
-    setTouched({ nomorPerkara: true, nik: true })
+    setTouched({ nomorPerkara: true, nik: true, nama: true, telepon: true })
 
     if (!validate()) return
 
@@ -55,6 +79,27 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
       })
 
       if (response.valid && response.data) {
+        // SIPP cross-check: bandingkan nama yang diisi dengan data SIPP
+        if (
+          response.data.pihak_nama &&
+          response.data.pihak_nama.toLowerCase().trim() !== nama.toLowerCase().trim()
+        ) {
+          const proceed = window.confirm(
+            `Nama yang Anda isi berbeda dengan data SIPP: "${response.data.pihak_nama}". Lanjutkan?`
+          )
+          if (!proceed) {
+            setIsSubmitting(false)
+            return
+          }
+        }
+
+        // Sampaikan data personal (NIK + nama + telepon) ke parent wizard
+        onPersonalDataChange?.({
+          nik: nik.trim(),
+          nama: nama.trim(),
+          telepon: telepon.trim(),
+        })
+
         if (response.data.existing_queue) {
           onMultiPihak(response.data)
         } else {
@@ -106,6 +151,25 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
     }
   }
 
+  const handleNamaChange = (value: string) => {
+    setNama(value)
+    if (touched.nama && errors.nama) {
+      setErrors((prev) => ({ ...prev, nama: undefined }))
+    }
+  }
+
+  const handleTeleponChange = (value: string) => {
+    // Hanya angka yang diperbolehkan
+    const numericValue = value.replace(/\D/g, "")
+    setTelepon(numericValue)
+    if (touched.telepon && errors.telepon) {
+      setErrors((prev) => ({ ...prev, telepon: undefined }))
+    }
+  }
+
+  // Submit disabled bila field required kosong atau sedang submit
+  const isDisabled = !nomorPerkara.trim() || !nik.trim() || !nama.trim() || isSubmitting
+
   return (
     <BlurFade>
       <Card>
@@ -119,6 +183,14 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
+          {/* Info alert: data hanya untuk verifikasi */}
+          <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-4">
+            <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" aria-hidden="true" />
+            <p className="text-sm text-primary/80">
+              Data Anda hanya dipakai untuk verifikasi dan notifikasi WhatsApp. Tidak disimpan permanen.
+            </p>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* API Error Alert */}
             {errors.api && (
@@ -173,13 +245,55 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
               </div>
             </div>
 
+            {/* Nama Lengkap Input */}
+            <div className="space-y-2">
+              <Label htmlFor="namaLengkap">
+                Nama Lengkap <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="namaLengkap"
+                placeholder="Sesuai KTP"
+                value={nama}
+                onChange={(e) => handleNamaChange(e.target.value)}
+                onBlur={() => setTouched((prev) => ({ ...prev, nama: true }))}
+                aria-invalid={!!errors.nama}
+                className={errors.nama ? "border-destructive" : ""}
+              />
+              {errors.nama && (
+                <p className="text-sm text-destructive">{errors.nama}</p>
+              )}
+            </div>
+
+            {/* No. WhatsApp Input */}
+            <div className="space-y-2">
+              <Label htmlFor="telepon">
+                No. WhatsApp
+              </Label>
+              <Input
+                id="telepon"
+                placeholder="08xxxxxxxxxx"
+                value={telepon}
+                onChange={(e) => handleTeleponChange(e.target.value)}
+                onBlur={() => setTouched((prev) => ({ ...prev, telepon: true }))}
+                aria-invalid={!!errors.telepon}
+                className={errors.telepon ? "border-destructive" : ""}
+              />
+              {errors.telepon ? (
+                <p className="text-sm text-destructive">{errors.telepon}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Opsional — untuk menerima notifikasi jadwal
+                </p>
+              )}
+            </div>
+
             {/* Tips - subtle */}
             <div className="flex items-start gap-2 text-xs text-muted-foreground">
               <Info className="mt-0.5 h-3 w-3 flex-shrink-0" />
               <span>Nomor perkara ada di surat panggilan. NIK ada di KTP Anda.</span>
             </div>
 
-            <Button type="submit" disabled={isSubmitting} className="w-full" size="lg">
+            <Button type="submit" disabled={isDisabled} className="w-full" size="lg">
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -187,8 +301,8 @@ export function StepValidate({ onNext, onMultiPihak, onError }: StepValidateProp
                 </>
               ) : (
                 <>
-                  Lanjutkan
-                  <Search className="ml-2 h-4 w-4" />
+                  Verifikasi &amp; Lanjut{" "}
+                  <span aria-hidden="true">→</span>
                 </>
               )}
             </Button>

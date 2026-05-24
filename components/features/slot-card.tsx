@@ -30,20 +30,22 @@ export function SlotCard({ slot, selected, onSelect, disabled = false }: SlotCar
         "min-w-[120px] min-h-[100px]",
         isDisabled && "cursor-not-allowed opacity-50 bg-muted border-muted",
         !isDisabled && !selected && "cursor-pointer hover:border-primary/50 hover:bg-primary/5 border-border",
-        selected && "border-primary bg-primary/10 shadow-md"
+        selected && "border-primary bg-gradient-to-br from-primary to-primary/80 shadow-md ring-[3px] ring-primary/30 text-white"
       )}
     >
       <div className="text-lg font-bold">
         {slot.time}
       </div>
-      <div className="text-sm text-muted-foreground">
+      {/* Jam akhir — lebih redup saat dipilih */}
+      <div className={cn("text-sm", selected ? "text-white/70" : "text-muted-foreground")}>
         {endTime}
       </div>
       <div className="mt-2 text-sm font-medium">
         {isFull ? (
           <span className="text-destructive">PENUH</span>
         ) : (
-          <span className={selected ? "text-primary" : "text-muted-foreground"}>
+          // Teks ketersediaan — putih saat gradient selected, muted saat idle
+          <span className={selected ? "text-white/90" : "text-muted-foreground"}>
             {slot.available}/{slot.capacity} tersedia
           </span>
         )}
