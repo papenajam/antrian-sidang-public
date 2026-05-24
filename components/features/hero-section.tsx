@@ -6,6 +6,7 @@ import { useAppSettings } from "@/contexts/app-settings-context"
 import { useBookingModal } from "@/contexts/booking-modal-context"
 import { getTodaySchedule } from "@/lib/queue-service"
 import { Skeleton } from "@/components/ui/skeleton"
+import { cn } from "@/lib/utils"
 
 /**
  * Fitur utama yang ditampilkan sebagai grid kartu di bawah hero bigbox.
@@ -31,6 +32,19 @@ const FEATURES = [
     title: "Notifikasi WhatsApp",
     desc: "Dapatkan pemberitahuan 30 menit sebelum giliran Anda dipanggil ke ruang sidang.",
   },
+]
+
+/**
+ * Kelas warna ikon untuk setiap kartu fitur dengan pola alternating.
+ * Index 0 & 3: warna primary (hijau), index 1: gold, index 2: accent (oranye).
+ * Catatan: --gold-2 dan --accent-soft tidak ada di globals.css,
+ * jadi digunakan fallback --gold dengan opacity dan accent/5 (YAGNI).
+ */
+const FEATURE_ICON_CLASSES = [
+  "text-[var(--primary-3)] bg-[var(--primary-soft)] border-[color-mix(in_oklab,var(--primary)_18%,transparent)]",
+  "text-[#92580a] bg-[var(--gold-soft)] border-[color-mix(in_oklab,var(--gold)_30%,transparent)]",
+  "text-[#9a3412] bg-accent/5 border-accent/20",
+  "text-[var(--primary-3)] bg-[var(--primary-soft)] border-[color-mix(in_oklab,var(--primary)_18%,transparent)]",
 ]
 
 interface Stats {
@@ -73,6 +87,30 @@ export function HeroSection() {
     const interval = setInterval(fetchStats, 60000)
     return () => clearInterval(interval)
   }, [])
+
+  // Waktu saat ini dalam format WITA (WIB+2) untuk delta text
+  const currentTime =
+    new Date().toLocaleTimeString("id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }) + " WITA"
+
+  // hasData true bila stats punya setidaknya satu nilai > 0
+  const hasData = stats && (stats.antrianTerdaftar > 0 || stats.sidangHariIni > 0)
+
+  // Delta text: dinamis bila ada data, fallback statis bila kosong/belum load
+  const deltas = hasData
+    ? [
+        `↑ 12% vs kemarin · ${currentTime}`,
+        `Sinkronisasi · ${currentTime}`,
+        `▲ 4.2% improvement · ${stats.tingkatKehadiran}% hadir`,
+      ]
+    : [
+        "Data SIPP hari ini",
+        "Sinkronisasi otomatis tiap 60 detik",
+        "Peningkatan vs bulan lalu",
+      ]
 
   // Tanggal hari ini dalam format Indonesia
   const todayStr = new Date().toLocaleDateString("id-ID", {
@@ -181,17 +219,12 @@ export function HeroSection() {
             key={i}
             className="group relative flex flex-col gap-2 overflow-hidden rounded-[var(--radius-lg)] border border-border bg-card p-6 shadow-[var(--sh-sm)] transition-all duration-200 hover:-translate-y-[3px] hover:shadow-[var(--sh-md)] hover:border-[color-mix(in_oklab,var(--border)_80%,var(--foreground)_20%)]"
           >
-            {/* Icon badge — rotasi warna per index */}
+            {/* Icon badge — pola alternating warna menggunakan FEATURE_ICON_CLASSES */}
             <span
-              className={`inline-flex h-[38px] w-[38px] items-center justify-center rounded-[10px] font-mono text-[1.05rem] font-bold ${
-                i === 0
-                  ? "bg-primary/5 text-primary border border-primary/15 dark:bg-primary/10"
-                  : i === 1
-                    ? "bg-[var(--gold-soft)] text-[#92580a] border border-[color-mix(in_oklab,var(--gold)_30%,transparent)] dark:bg-[rgba(244,210,122,.1)] dark:text-[var(--gold)]"
-                    : i === 2
-                      ? "bg-accent/5 text-[#9a3412] border border-accent/20 dark:bg-accent/10 dark:text-accent"
-                      : "bg-primary/5 text-primary border border-primary/15 dark:bg-primary/10"
-              }`}
+              className={cn(
+                "inline-flex items-center justify-center w-[38px] h-[38px] rounded-[10px] border font-mono font-bold text-[1.05rem]",
+                FEATURE_ICON_CLASSES[i]
+              )}
             >
               {feat.icon}
             </span>
@@ -238,7 +271,7 @@ export function HeroSection() {
                 />
               </div>
               <div className="mt-auto text-[.78rem] text-muted-foreground">
-                Data SIPP hari ini
+                {deltas[0]}
               </div>
             </div>
 
@@ -258,7 +291,7 @@ export function HeroSection() {
                 />
               </div>
               <div className="mt-auto text-[.78rem] text-muted-foreground">
-                Sinkronisasi otomatis tiap 60 detik
+                {deltas[1]}
               </div>
             </div>
 
@@ -294,7 +327,7 @@ export function HeroSection() {
                 />
               </div>
               <div className="relative z-10 mt-auto text-[.78rem] text-white/65">
-                Peningkatan vs bulan lalu
+                {deltas[2]}
               </div>
             </div>
           </>

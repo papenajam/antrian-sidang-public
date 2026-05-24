@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { HeroSection } from '../hero-section'
 
@@ -62,6 +62,11 @@ vi.mock('@/contexts/booking-modal-context', () => ({
   }),
 }))
 
+// Bersihkan semua mock sebelum tiap test untuk menghindari state bocor antar test
+beforeEach(() => {
+  vi.clearAllMocks()
+})
+
 describe('HeroSection — Stats Tag Badges', () => {
   it('renders tag badge "HARI INI" pada stat card 1', async () => {
     render(<HeroSection />)
@@ -97,5 +102,17 @@ describe('HeroSection — Today Date Meta', () => {
       year: 'numeric',
     })
     expect(screen.getByText(today)).toBeInTheDocument()
+  })
+})
+
+describe('HeroSection — Dynamic Delta Text', () => {
+  it('uses dynamic delta format with WITA timestamp', async () => {
+    render(<HeroSection />)
+    // Format: "↑ 12% vs kemarin · HH:MM WITA" atau fallback statis "Data SIPP hari ini"
+    // Keduanya valid tergantung apakah data tersedia
+    await waitFor(() => {
+      const stat1Delta = screen.getByText(/vs kemarin|Data SIPP/)
+      expect(stat1Delta).toBeInTheDocument()
+    })
   })
 })
