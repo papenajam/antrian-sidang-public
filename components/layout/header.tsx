@@ -109,7 +109,7 @@ export function Header() {
             <button
               key={n.id}
               onClick={() => scrollTo(n.id)}
-              className={`rounded-full border-0 bg-transparent px-4 py-2 text-[.88rem] font-medium tracking-[-.005em] transition-all duration-200 cursor-pointer ${
+              className={`rounded-full border-0 px-4 py-2 text-[.88rem] font-medium tracking-[-.005em] whitespace-nowrap transition-all duration-200 cursor-pointer ${
                 activeNav === n.id
                   ? "bg-foreground text-background"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
