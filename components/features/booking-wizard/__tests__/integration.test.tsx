@@ -95,12 +95,14 @@ describe('BookingWizard Integration', () => {
     const user = userEvent.setup()
     await user.type(nomorPerkaraInput, '123/Pdt.G/2024/PA.Pps')
     await user.type(nikInput, '3201234567890001')
+    // Isi nama sesuai pihak_nama agar SIPP cross-check tidak memunculkan window.confirm
+    await user.type(screen.getByLabelText(/nama lengkap/i), 'Ahmad')
 
     // Verifikasi input terisi dengan benar sebelum submit
     expect(nomorPerkaraInput).toHaveValue('123/Pdt.G/2024/PA.Pps')
     expect(nikInput).toHaveValue('3201234567890001')
 
-    fireEvent.click(screen.getByRole('button', { name: /anjutkan/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Verifikasi & Lanjut/i }))
 
     // Step 2: Pilih slot
     await waitFor(() => {

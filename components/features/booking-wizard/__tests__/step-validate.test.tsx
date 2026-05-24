@@ -8,12 +8,17 @@ vi.mock('@/lib/queue-service', () => ({
   validatePerkara: vi.fn(),
 }))
 
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
+}))
+
 describe('StepValidate', () => {
   const defaultProps = {
     onNext: vi.fn(),
     onExistingQueue: vi.fn(),
     onMultiPihak: vi.fn(),
     onError: vi.fn(),
+    onPersonalDataChange: vi.fn(),
   }
 
   beforeEach(() => {
@@ -28,15 +33,20 @@ describe('StepValidate', () => {
 
   it('renders submit button', () => {
     render(<StepValidate {...defaultProps} />)
-    expect(screen.getByRole('button', { name: /anjutkan/i })).toBeInTheDocument()
+    // Label button sekarang "Verifikasi & Lanjut →"
+    expect(screen.getByRole('button', { name: /Verifikasi & Lanjut/i })).toBeInTheDocument()
   })
 
   it('shows validation error when fields are empty', async () => {
-    render(<StepValidate {...defaultProps} />)
-    fireEvent.click(screen.getByRole('button', { name: /anjutkan/i }))
+    const { container } = render(<StepValidate {...defaultProps} />)
+    // Isi nomor_perkara dan nik agar hanya nama yang kosong saat submit
+    await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
+    await userEvent.type(screen.getByLabelText(/nik/i), '3201234567890001')
+    // Submit form langsung (bypass disabled button) — nama kosong menyebabkan error
+    fireEvent.submit(container.querySelector('form')!)
 
     await waitFor(() => {
-      expect(screen.getByText(/nomor perkara wajib diisi/i)).toBeInTheDocument()
+      expect(screen.getByText(/nama lengkap wajib diisi/i)).toBeInTheDocument()
     })
   })
 
@@ -45,6 +55,7 @@ describe('StepValidate', () => {
       valid: true,
       data: {
         perkara_id: 123,
+        // pihak_nama harus sama dengan nama yang diisi agar tidak ada window.confirm
         pihak_nama: 'Ahmad',
         pihak_role: 'Penggugat',
         jadwal: { tanggal: '2026-05-30', ruangan: 'Ruang 1' },
@@ -58,7 +69,9 @@ describe('StepValidate', () => {
 
     await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await userEvent.type(screen.getByLabelText(/nik/i), '3201234567890001')
-    fireEvent.click(screen.getByRole('button', { name: /anjutkan/i }))
+    // Isi nama sesuai pihak_nama agar SIPP cross-check tidak muncul window.confirm
+    await userEvent.type(screen.getByLabelText(/nama lengkap/i), 'Ahmad')
+    fireEvent.click(screen.getByRole('button', { name: /Verifikasi & Lanjut/i }))
 
     await waitFor(() => {
       expect(queueService.validatePerkara).toHaveBeenCalledWith({
@@ -81,7 +94,8 @@ describe('StepValidate', () => {
 
     await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await userEvent.type(screen.getByLabelText(/nik/i), '0000000000000000')
-    fireEvent.click(screen.getByRole('button', { name: /anjutkan/i }))
+    await userEvent.type(screen.getByLabelText(/nama lengkap/i), 'Ahmad')
+    fireEvent.click(screen.getByRole('button', { name: /Verifikasi & Lanjut/i }))
 
     await waitFor(() => {
       expect(onError).toHaveBeenCalledWith('NIK tidak terdaftar')
@@ -110,10 +124,46 @@ describe('StepValidate', () => {
 
     await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await userEvent.type(screen.getByLabelText(/nik/i), '3201234567890001')
-    fireEvent.click(screen.getByRole('button', { name: /anjutkan/i }))
+    // Nama harus sama dengan pihak_nama agar tidak ada window.confirm
+    await userEvent.type(screen.getByLabelText(/nama lengkap/i), 'Ahmad')
+    fireEvent.click(screen.getByRole('button', { name: /Verifikasi & Lanjut/i }))
 
     await waitFor(() => {
       expect(onMultiPihak).toHaveBeenCalledWith(mockResponse.data)
     })
+  })
+})
+
+// ===== Test baru: Form Fields Nama + Telepon =====
+describe('StepValidate — Form Fields', () => {
+  const mockProps = {
+    onNext: vi.fn(),
+    onMultiPihak: vi.fn(),
+    onError: vi.fn(),
+    onPersonalDataChange: vi.fn(),
+  }
+
+  it('renders 4 fields: nomor perkara, NIK, nama, telepon', () => {
+    render(<StepValidate {...mockProps} />)
+    expect(screen.getByLabelText(/Nomor Perkara/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/NIK/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Nama Lengkap/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/No\. WhatsApp/i)).toBeInTheDocument()
+  })
+
+  it('renders alert info text', () => {
+    render(<StepValidate {...mockProps} />)
+    expect(screen.getByText(/Data Anda hanya dipakai untuk verifikasi/)).toBeInTheDocument()
+  })
+
+  it('submit button labeled "Verifikasi & Lanjut →"', () => {
+    render(<StepValidate {...mockProps} />)
+    expect(screen.getByRole('button', { name: /Verifikasi & Lanjut/ })).toBeInTheDocument()
+  })
+
+  it('disables submit when required fields empty', () => {
+    render(<StepValidate {...mockProps} />)
+    const submit = screen.getByRole('button', { name: /Verifikasi & Lanjut/ })
+    expect(submit).toBeDisabled()
   })
 })

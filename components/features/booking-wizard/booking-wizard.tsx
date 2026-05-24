@@ -81,7 +81,18 @@ export function BookingWizard() {
   const [bookingData, setBookingData] = useState<BookingData>(INITIAL_BOOKING_DATA)
   const [ticket, setTicket] = useState<(QueueTicket & { slot_time: string }) | null>(null)
   const [existingQueue, setExistingQueue] = useState<ExistingQueue | null>(null)
+  // personalData akan dipakai oleh StepConfirm (Task 4.4) dan StepTicket (Task 4.5)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [personalData, setPersonalData] = useState<{ nama: string; telepon: string } | null>(null)
   const { setIsOpen } = useBookingModal()
+
+  /**
+   * Handler untuk menyimpan data personal dari StepValidate.
+   * Akan dipakai oleh StepConfirm (Task 4.4) dan StepTicket (Task 4.5).
+   */
+  const handlePersonalData = (info: { nama: string; telepon: string }) => {
+    setPersonalData(info)
+  }
 
   /**
    * Handler ketika validasi berhasil dan tidak ada existing queue.
@@ -174,6 +185,7 @@ export function BookingWizard() {
     setBookingData(INITIAL_BOOKING_DATA)
     setTicket(null)
     setExistingQueue(null)
+    setPersonalData(null)
     // Close modal agar user bisa buka lagi via FAB atau HeroSection
     setIsOpen(false)
   }
@@ -217,6 +229,7 @@ export function BookingWizard() {
               onNext={handleValidateNext}
               onMultiPihak={handleMultiPihak}
               onError={handleValidateError}
+              onPersonalDataChange={handlePersonalData}
             />
           </BlurFade>
         )}
