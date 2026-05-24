@@ -14,10 +14,10 @@ export function cn(...inputs: ClassValue[]) {
  * @returns Waktu baru dalam format HH:MM, atau string kosong jika input tidak valid
  */
 export function addMin(hhmm: string, mins: number): string {
-  if (!hhmm) return ""
-  const [h, m] = hhmm.split(":").map(Number)
-  const total = h * 60 + m + mins
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`
+  if (!hhmm) return "";
+  const [h, m] = hhmm.split(":").map(Number);
+  const total = h * 60 + m + mins;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
 /**
@@ -28,13 +28,13 @@ export function addMin(hhmm: string, mins: number): string {
  * @returns Tanggal dalam format panjang Indonesia, atau string kosong jika input tidak valid
  */
 export function formatDate(isoDate: string): string {
-  if (!isoDate) return ""
-  const date = new Date(isoDate)
-  if (isNaN(date.getTime())) return ""
+  if (!isoDate) return "";
+  const date = new Date(isoDate);
+  if (isNaN(date.getTime())) return "";
   return date.toLocaleDateString("id-ID", {
     weekday: "long",
     day: "numeric",
     month: "long",
     year: "numeric",
-  })
+  });
 }
