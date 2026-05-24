@@ -1,85 +1,83 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { Check } from "lucide-react"
-import { motion } from "framer-motion"
 
+/**
+ * Props untuk komponen FormProgress.
+ * currentStep adalah 1-based (nilai 1 sampai steps.length).
+ */
 interface FormProgressProps {
-  steps: { id: string; title: string }[]
+  steps: { id: number; label: string }[]
   currentStep: number
 }
 
+/**
+ * Komponen pill stepper untuk menampilkan progress pendaftaran antrian sidang.
+ * Menampilkan setiap langkah sebagai pill horizontal dengan state: done, active, pending.
+ */
 export function FormProgress({ steps, currentStep }: FormProgressProps) {
   return (
-    <div className="mb-10" role="navigation" aria-label="Progress pendaftaran">
-      <div className="flex items-start justify-between">
-        {steps.map((step, index) => {
-          const isCompleted = index < currentStep
-          const isCurrent = index === currentStep
-          const isPending = index > currentStep
+    <nav
+      role="navigation"
+      aria-label="Progress pendaftaran"
+      className="mb-6 w-full"
+    >
+      {/* Daftar pill langkah secara horizontal */}
+      <ol className="flex items-stretch gap-2">
+        {steps.map((step) => {
+          // Tentukan state setiap langkah berdasarkan currentStep (1-based)
+          const isDone = step.id < currentStep
+          const isActive = step.id === currentStep
+          const isPending = step.id > currentStep
 
           return (
-            <div key={step.id} className="flex flex-1 items-start">
-              <div className="relative flex flex-col items-center">
-                {/* Step circle with animation */}
-                <motion.div
-                  className={cn(
-                    "relative flex h-11 w-11 items-center justify-center rounded-full border-2 text-sm font-bold transition-all",
-                    isCompleted && "border-primary bg-primary text-white shadow-lg shadow-primary/25",
-                    isCurrent && "border-primary bg-white text-primary shadow-lg shadow-primary/25 ring-4 ring-primary/20",
-                    isPending && "border-muted-foreground/30 bg-muted text-muted-foreground"
-                  )}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: index * 0.1, type: "spring", stiffness: 300 }}
-                >
-                  {/* Pulse animation for current step */}
-                  {isCurrent && (
-                    <span className="absolute inset-0 animate-ping rounded-full bg-primary/30 opacity-75" />
-                  )}
-
-                  {/* Check icon for completed steps */}
-                  {isCompleted ? (
-                    <Check className="h-5 w-5" />
-                  ) : (
-                    <span>{index + 1}</span>
-                  )}
-                </motion.div>
-
-                {/* Step title */}
-                <motion.span
-                  className={cn(
-                    "mt-3 text-center text-xs font-semibold transition-colors sm:text-sm",
-                    isCompleted && "text-primary",
-                    isCurrent && "text-primary",
-                    isPending && "text-muted-foreground"
-                  )}
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 + 0.1 }}
-                >
-                  {step.title}
-                </motion.span>
-
-                {/* Connector line */}
-                {index < steps.length - 1 && (
-                  <div className="absolute left-1/2 top-5 -z-10 w-full px-4">
-                    <div className="h-1 w-full rounded-full bg-muted">
-                      {/* Progress fill */}
-                      <motion.div
-                        className="h-full rounded-full bg-gradient-to-r from-primary to-primary/80"
-                        initial={{ width: "0%" }}
-                        animate={{ width: isCompleted ? "100%" : "0%" }}
-                        transition={{ duration: 0.5, ease: "easeOut" }}
-                      />
-                    </div>
-                  </div>
+            <li
+              key={step.id}
+              className="flex flex-1"
+              aria-current={isActive ? "step" : undefined}
+            >
+              {/* Pill container — tampilan berbeda per state */}
+              <div
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-all",
+                  // State: selesai — background accent, teks accent-foreground
+                  isDone && "border-accent bg-accent text-accent-foreground",
+                  // State: aktif — background card dengan shadow, teks primary
+                  isActive && "border-border bg-card text-primary shadow shadow-primary/10",
+                  // State: menunggu — background muted transparan, teks muted
+                  isPending && "border-border/40 bg-muted/30 text-muted-foreground"
                 )}
+              >
+                {/* Lingkaran nomor atau centang */}
+                <span
+                  className={cn(
+                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
+                    // State selesai: lingkaran accent gelap
+                    isDone && "bg-accent-foreground text-accent",
+                    // State aktif: lingkaran primary
+                    isActive && "bg-primary text-primary-foreground",
+                    // State pending: lingkaran muted
+                    isPending && "bg-muted-foreground/20 text-muted-foreground"
+                  )}
+                >
+                  {/* Tampilkan tanda centang untuk langkah selesai, nomor untuk lainnya */}
+                  {isDone ? "✓" : step.id}
+                </span>
+
+                {/* Label langkah — format "Langkah N — Nama" */}
+                <span className="hidden truncate sm:inline">
+                  Langkah {step.id} — {step.label}
+                </span>
+
+                {/* Versi mobile: hanya label tanpa "Langkah N —" */}
+                <span className="inline truncate sm:hidden">
+                  {step.label}
+                </span>
               </div>
-            </div>
+            </li>
           )
         })}
-      </div>
-    </div>
+      </ol>
+    </nav>
   )
 }

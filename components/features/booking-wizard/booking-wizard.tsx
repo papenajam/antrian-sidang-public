@@ -25,29 +25,29 @@ interface BookingData {
 }
 
 const WIZARD_STEPS = [
-  { id: "validate", title: "Validasi" },
-  { id: "select-slot", title: "Pilih Jam" },
-  { id: "confirm", title: "Konfirmasi" },
-  { id: "ticket", title: "Tiket" },
+  { id: 1, label: "Validasi" },
+  { id: 2, label: "Pilih Jam" },
+  { id: 3, label: "Konfirmasi" },
+  { id: 4, label: "Tiket" },
 ]
 
 /**
- * Mendapatkan indeks progress bar berdasarkan langkah saat ini.
+ * Mendapatkan nomor progress (1-based) berdasarkan langkah wizard saat ini.
  */
 function getProgressStep(step: Step): number {
   switch (step) {
     case 1:
-      return 0
-    case 2:
       return 1
-    case 3:
+    case 2:
       return 2
-    case 4:
+    case 3:
       return 3
+    case 4:
+      return 4
     case 'existing-queue':
-      return 1 // Existing queue dianggap setelah validasi
+      return 2 // setelah validasi
     default:
-      return 0
+      return 1
   }
 }
 
@@ -201,7 +201,7 @@ export function BookingWizard() {
       {/* Progress Bar */}
       <div 
         role="progressbar" 
-        aria-valuenow={progressStep + 1} 
+        aria-valuenow={progressStep}
         aria-valuemin={1} 
         aria-valuemax={4}
         className="mb-8"

@@ -36,12 +36,16 @@ describe('BookingWizard', () => {
 
   it('renders all 4 step labels in progress bar', () => {
     render(<BookingModalProvider><BookingWizard /></BookingModalProvider>)
-    // Gunakan queryAllByText karena "Validasi" muncul di progress bar dan StepValidate
+    // Gunakan queryAllByText karena setiap label bisa muncul 2x (versi desktop dan mobile)
+    // serta "Validasi" juga muncul di heading StepValidate
     const validasiElements = screen.queryAllByText(/validasi/i)
     expect(validasiElements.length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText(/pilih jam/i)).toBeInTheDocument()
-    expect(screen.getByText(/konfirmasi/i)).toBeInTheDocument()
-    expect(screen.getByText(/tiket/i)).toBeInTheDocument()
+    const pilihJamElements = screen.queryAllByText(/pilih jam/i)
+    expect(pilihJamElements.length).toBeGreaterThanOrEqual(1)
+    const konfirmasiElements = screen.queryAllByText(/konfirmasi/i)
+    expect(konfirmasiElements.length).toBeGreaterThanOrEqual(1)
+    const tiketElements = screen.queryAllByText(/tiket/i)
+    expect(tiketElements.length).toBeGreaterThanOrEqual(1)
   })
 
   it('navigates to step 2 after successful validation', async () => {

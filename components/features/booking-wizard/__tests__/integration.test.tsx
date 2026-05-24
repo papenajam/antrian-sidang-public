@@ -26,11 +26,11 @@ vi.mock('@/components/magic/blur-fade', () => ({
 
 // Mock FormProgress agar tidak perlu render progress bar kompleks
 vi.mock('@/components/features/form-progress', () => ({
-  FormProgress: ({ steps, currentStep }: { steps: Array<{ id: string; title: string }>; currentStep: number }) => (
+  FormProgress: ({ steps, currentStep }: { steps: Array<{ id: number; label: string }>; currentStep: number }) => (
     <div data-testid="form-progress">
-      {steps.map((step, index) => (
-        <span key={step.id} data-active={index === currentStep}>
-          {step.title}
+      {steps.map((step) => (
+        <span key={step.id} data-active={step.id === currentStep}>
+          {step.label}
         </span>
       ))}
     </div>
