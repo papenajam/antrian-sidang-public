@@ -102,6 +102,10 @@
   70% { box-shadow: 0 0 0 8px rgba(234, 88, 12, 0); }
   100% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0); }
 }
+@keyframes as-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 
 /* ---- Scrollbar -------------------------------------------- */
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
@@ -199,6 +203,13 @@ html { scroll-behavior: smooth; }
   --sh-xl: 0 25px 50px -12px rgb(26 46 34 / .18);
 
   --ease: cubic-bezier(.22, 1, .36, 1);
+
+  /* Design parity tokens (round 2 findings) */
+  --primary-3: #0f5f2e;
+  --primary-soft: #e7f4ec;
+  --fg-2: #3e5145;
+  --fg-4: #9aa49a;
+  --gold-3: #f4d27a;
 }
 
 /* ============================================================
@@ -405,5 +416,18 @@ html { scroll-behavior: smooth; }
   }
   .dark .footer-cta-gradient {
     background: linear-gradient(135deg, #0a2015 0%, #0f5f2e 60%, #0f3a20 100%);
+  }
+}
+
+@media print {
+  body::before { display: none; }
+  header,
+  [data-section="hero"],
+  [data-section="schedule"],
+  [data-section="queue-status"],
+  [data-section="panduan"],
+  [data-section="footer-cta"],
+  footer {
+    display: none !important;
   }
 }
