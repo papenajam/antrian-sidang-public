@@ -7,6 +7,7 @@ import { Search, Plus, Copy, Printer, MessageCircle } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import { toast } from "sonner"
 import { useAppSettings } from "@/contexts/app-settings-context"
+import { formatDate } from "@/lib/utils"
 import type { QueueTicket } from "@/lib/api-types"
 
 interface StepTicketProps {
@@ -15,19 +16,6 @@ interface StepTicketProps {
   telepon?: string
   onCheckStatus: () => void
   onBookAgain: () => void
-}
-
-/**
- * Format tanggal ke format Indonesia yang mudah dibaca.
- */
-function formatTanggal(dateStr: string): string {
-  const date = new Date(dateStr)
-  return date.toLocaleDateString("id-ID", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  })
 }
 
 /**
@@ -183,7 +171,7 @@ export function StepTicket({ ticket, telepon, onCheckStatus, onBookAgain }: Step
                 <TicketRow label="Atas Nama" value={ticket.pihak_nama} />
                 <TicketRow label="Nomor Perkara" value={ticket.nomor_perkara} />
                 {ticket.tanggal && (
-                  <TicketRow label="Tanggal Sidang" value={formatTanggal(ticket.tanggal)} />
+                  <TicketRow label="Tanggal Sidang" value={formatDate(ticket.tanggal)} />
                 )}
                 <TicketRow label="Waktu" value={ticket.slot_time} />
                 <TicketRow label="Ruangan" value={ticket.ruang_sidang ?? "-"} />

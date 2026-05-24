@@ -171,6 +171,7 @@ export function ScheduleTable() {
     return (
       <div
         id="sec-jadwal"
+        data-section="schedule"
         className="rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-[var(--sh-sm)] md:p-8"
       >
         <Skeleton className="mb-6 h-6 w-44" />
@@ -186,6 +187,7 @@ export function ScheduleTable() {
   return (
     <section
       id="sec-jadwal"
+      data-section="schedule"
       className="rounded-[var(--radius-2xl)] border border-border bg-card p-6 shadow-[var(--sh-sm)] md:p-8"
     >
       {/* Header — Kicker + Judul + Search + Refresh */}

@@ -125,6 +125,7 @@ export function HeroSection() {
     <>
       {/* ===== BIGBOX HERO ===== */}
       <section
+        data-section="hero"
         className="relative mt-8 overflow-hidden rounded-[var(--radius-3xl)] border border-border p-8 pb-7 shadow-[var(--sh)] backdrop-blur-[8px] md:p-10 lg:p-12"
         style={{
           background:

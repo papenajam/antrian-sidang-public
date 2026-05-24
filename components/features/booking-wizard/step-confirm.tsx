@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { CheckCircle, ArrowLeft, Loader2, AlertTriangle, RefreshCw, AlertOctagon } from "lucide-react"
 import { bookQueueWizard, getAvailableSlots } from "@/lib/queue-service"
-import { cn } from "@/lib/utils"
+import { cn, formatDate } from "@/lib/utils"
 import type { SlotInfo, QueueTicket } from "@/lib/api-types"
 
 interface StepConfirmProps {
@@ -117,15 +117,6 @@ export function StepConfirm({
     return () => clearInterval(interval)
   }, [perkaraId, tanggal, slot.time])
 
-  const formatTanggal = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString("id-ID", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    })
-  }
 
   const handleConfirm = async () => {
     setIsSubmitting(true)
@@ -220,7 +211,7 @@ export function StepConfirm({
               />
               <ConfirmCell
                 label="Tanggal Sidang"
-                value={formatTanggal(tanggal)}
+                value={formatDate(tanggal)}
               />
             </div>
           </div>

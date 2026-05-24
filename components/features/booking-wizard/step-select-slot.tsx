@@ -7,6 +7,7 @@ import { BlurFade } from "@/components/magic/blur-fade"
 import { SlotCard } from "@/components/features/slot-card"
 import { Calendar, Clock, ArrowLeft, ArrowRight, Loader2, MapPin, AlertCircle, Info } from "lucide-react"
 import { getAvailableSlots } from "@/lib/queue-service"
+import { formatDate } from "@/lib/utils"
 import type { SlotInfo } from "@/lib/api-types"
 
 interface StepSelectSlotProps {
@@ -48,17 +49,6 @@ export function StepSelectSlot({ perkaraId, tanggal, ruangan, onNext, onBack, cu
     }
   }
 
-  // Format tanggal untuk display
-  const formatTanggal = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString("id-ID", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    })
-  }
-
   const formatJam = () => {
     return lastRefresh.toLocaleTimeString("id-ID", {
       hour: "2-digit",
@@ -90,7 +80,7 @@ export function StepSelectSlot({ perkaraId, tanggal, ruangan, onNext, onBack, cu
                       Tanggal Sidang
                     </div>
                     <div className="truncate text-xs font-bold text-white sm:text-base">
-                      {formatTanggal(tanggal)}
+                      {formatDate(tanggal)}
                     </div>
                   </div>
                 </div>
@@ -142,7 +132,7 @@ export function StepSelectSlot({ perkaraId, tanggal, ruangan, onNext, onBack, cu
 
                   {/* Date kicker mono uppercase bracket */}
                   <p className="font-mono text-[.72rem] uppercase tracking-[.06em] text-muted-foreground mb-3">
-                    [ Slot tersedia · {formatTanggal(tanggal)} ]
+                    [ Slot tersedia · {formatDate(tanggal)} ]
                   </p>
 
                   {/* Header Slot Selection */}
