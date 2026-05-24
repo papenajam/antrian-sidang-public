@@ -123,3 +123,22 @@ export async function rescheduleQueue(data: RescheduleRequest): Promise<Reschedu
 export async function bookQueueWizard(data: QueueBookWizardRequest): Promise<QueueBookResponse> {
   return api.post<QueueBookResponse>('/public/queue/book', data);
 }
+
+/**
+ * Cek status antrian berdasarkan nomor antrian (format S-NNN).
+ * Endpoint backend baru — fallback ke 404 dengan pesan jelas di error field.
+ *
+ * @param queueNumber - Nomor antrian format S-NNN
+ * @param nik - NIK opsional untuk verifikasi identitas
+ * @returns QueueStatusResponse dengan data null jika tidak ditemukan
+ */
+export async function getStatusByQueueNumber(
+  queueNumber: string,
+  nik?: string
+): Promise<QueueStatusResponse> {
+  const encoded = encodeURIComponent(queueNumber);
+  const nikParam = nik ? `?nik=${encodeURIComponent(nik)}` : '';
+  return api.get<QueueStatusResponse>(
+    `/public/queue/status-by-number/${encoded}${nikParam}`
+  );
+}

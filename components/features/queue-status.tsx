@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { RescheduleDialog } from "./reschedule-dialog"
+import { CekStatusDialog } from "./cek-status-dialog"
 import { useCurrentCall } from "@/lib/hooks/use-current-call"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
@@ -93,10 +94,9 @@ export function QueueStatus({
 
   const hasActiveBooking = isActive || bookingState.queueNumber !== null
 
-  /** Tangani klik Cek Status Saya — modal akan diimplementasikan di Task 3.3 */
+  /** Tangani klik Cek Status Saya — buka CekStatusDialog */
   const handleCekStatus = () => {
     setShowCekStatus(true)
-    toast.info("Fitur cek status akan segera tersedia.")
   }
 
   /** Tangani klik Ganti Jadwal — buka RescheduleDialog jika booking aktif */
@@ -278,6 +278,9 @@ export function QueueStatus({
             }}
           />
         )}
+
+      {/* Dialog cek status antrian berdasarkan nomor antrian */}
+      <CekStatusDialog open={showCekStatus} onOpenChange={setShowCekStatus} />
     </>
   )
 }

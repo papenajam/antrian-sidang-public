@@ -74,7 +74,14 @@ export interface QueueBookResponse {
 }
 
 export interface QueueStatusResponse {
-  data: QueueTicket;
+  // data bisa null jika nomor antrian tidak ditemukan
+  data: (QueueTicket & {
+    position?: number;
+    estimated_minutes?: number;
+    jenis_perkara?: string;
+    agenda?: string;
+  }) | null;
+  error: string | null;
 }
 
 // Queue statistics untuk dashboard
