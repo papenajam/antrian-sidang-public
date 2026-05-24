@@ -19,6 +19,8 @@ interface BookingData {
   nik: string
   namaPihak: string
   nomorPerkara: string
+  /** Jenis perkara dari data validasi SIPP */
+  jenisPerkara: string
   tanggal: string
   ruangan: string
   selectedSlot: SlotInfo | null
@@ -56,6 +58,7 @@ const INITIAL_BOOKING_DATA: BookingData = {
   nik: "",
   namaPihak: "",
   nomorPerkara: "",
+  jenisPerkara: "",
   tanggal: "",
   ruangan: "",
   selectedSlot: null,
@@ -71,6 +74,7 @@ function mapValidationToBooking(data: NonNullable<ValidateResponse['data']>, pre
     perkaraId: data.perkara_id,
     namaPihak: data.pihak_nama,
     nomorPerkara: data.jadwal.perkara?.nomor_perkara || prev.nomorPerkara,
+    jenisPerkara: data.jadwal.perkara?.jenis_perkara_nama || prev.jenisPerkara,
     tanggal: data.jadwal.waktu,
     ruangan: data.jadwal.ruangan,
   }
@@ -81,8 +85,7 @@ export function BookingWizard() {
   const [bookingData, setBookingData] = useState<BookingData>(INITIAL_BOOKING_DATA)
   const [ticket, setTicket] = useState<(QueueTicket & { slot_time: string }) | null>(null)
   const [existingQueue, setExistingQueue] = useState<ExistingQueue | null>(null)
-  // personalData akan dipakai oleh StepConfirm (Task 4.4) dan StepTicket (Task 4.5)
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // personalData dipakai oleh StepConfirm dan StepTicket (Task 4.5)
   const [personalData, setPersonalData] = useState<{ nama: string; telepon: string } | null>(null)
   const { setIsOpen } = useBookingModal()
 
@@ -265,6 +268,9 @@ export function BookingWizard() {
               nik={bookingData.nik}
               namaPihak={bookingData.namaPihak}
               nomorPerkara={bookingData.nomorPerkara}
+              jenisPerkara={bookingData.jenisPerkara}
+              nama={personalData?.nama}
+              telepon={personalData?.telepon}
               tanggal={bookingData.tanggal}
               slot={bookingData.selectedSlot}
               ruangan={bookingData.ruangan}
