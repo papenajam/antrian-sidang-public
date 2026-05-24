@@ -39,13 +39,14 @@ const FEATURES = [
  * Index 0 & 3: warna primary (hijau), index 1: gold, index 2: accent (oranye).
  * Catatan: --gold-2 dan --accent-soft tidak ada di globals.css,
  * jadi digunakan fallback --gold dengan opacity dan accent/5 (YAGNI).
+ * Setiap entry menyertakan dark variant untuk preserve dark mode fidelity.
  */
 const FEATURE_ICON_CLASSES = [
-  "text-[var(--primary-3)] bg-[var(--primary-soft)] border-[color-mix(in_oklab,var(--primary)_18%,transparent)]",
-  "text-[#92580a] bg-[var(--gold-soft)] border-[color-mix(in_oklab,var(--gold)_30%,transparent)]",
-  "text-[#9a3412] bg-accent/5 border-accent/20",
-  "text-[var(--primary-3)] bg-[var(--primary-soft)] border-[color-mix(in_oklab,var(--primary)_18%,transparent)]",
-]
+  "text-[var(--primary-3)] bg-[var(--primary-soft)] border-[color-mix(in_oklab,var(--primary)_18%,transparent)] dark:bg-primary/10 dark:text-primary",
+  "text-[#92580a] bg-[var(--gold-soft)] border-[color-mix(in_oklab,var(--gold)_30%,transparent)] dark:bg-[rgba(244,210,122,.1)] dark:text-[var(--gold)]",
+  "text-[#9a3412] bg-accent/5 border-accent/20 dark:bg-accent/10 dark:text-accent",
+  "text-[var(--primary-3)] bg-[var(--primary-soft)] border-[color-mix(in_oklab,var(--primary)_18%,transparent)] dark:bg-primary/10 dark:text-primary",
+];
 
 interface Stats {
   antrianTerdaftar: number
