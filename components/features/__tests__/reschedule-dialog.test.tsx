@@ -62,7 +62,7 @@ describe('RescheduleDialog', () => {
 
   it('calls rescheduleQueue on confirm', async () => {
     vi.mocked(queueService.rescheduleQueue).mockResolvedValue({
-      data: { queue_number: 'A-003', slot_time: '10:00', status: 'waiting' },
+      data: { queue_number: 'A-003', slot_time: '10:00', status: 'waiting', pihak_nama: 'Ahmad', nomor_perkara: '123/Pdt.G/2024/PA.Pps', ruang_sidang: 'Ruang 1' },
       message: 'Berhasil',
     })
 

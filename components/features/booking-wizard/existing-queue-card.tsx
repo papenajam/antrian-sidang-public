@@ -19,8 +19,8 @@ export function ExistingQueueCard({
   onReschedule,
   onBookAgain,
 }: ExistingQueueCardProps) {
-  const endHour = parseInt(queue.slot_time.split(':')[0], 10) + 1
-  const endTime = `${endHour.toString().padStart(2, '0')}:00`
+  const endHour = queue.slot_time ? parseInt(queue.slot_time.split(':')[0], 10) + 1 : 0
+  const endTime = queue.slot_time ? `${endHour.toString().padStart(2, '0')}:00` : "-"
 
   const statusLabels: Record<string, string> = {
     waiting: 'Menunggu',
@@ -59,7 +59,7 @@ export function ExistingQueueCard({
               <Clock className="h-4 w-4 text-muted-foreground" />
               <div>
                 <div className="text-sm text-muted-foreground">Jam Sidang</div>
-                <div className="font-medium">{queue.slot_time} - {endTime}</div>
+                <div className="font-medium">{queue.slot_time || "-"} - {endTime}</div>
               </div>
             </div>
             <div className="flex items-center gap-3">

@@ -15,7 +15,6 @@ vi.mock('sonner', () => ({
 describe('StepValidate', () => {
   const defaultProps = {
     onNext: vi.fn(),
-    onExistingQueue: vi.fn(),
     onMultiPihak: vi.fn(),
     onError: vi.fn(),
     onPersonalDataChange: vi.fn(),
@@ -58,14 +57,27 @@ describe('StepValidate', () => {
         // pihak_nama harus sama dengan nama yang diisi agar tidak ada window.confirm
         pihak_nama: 'Ahmad',
         pihak_role: 'Penggugat',
-        jadwal: { tanggal: '2026-05-30', ruangan: 'Ruang 1' },
+        jadwal: {
+          id: 1,
+          perkara_id: 123,
+          ruangan: 'Ruang 1',
+          waktu: '2026-05-30T09:00:00',
+          jam_sidang: '09:00',
+          agenda: 'Sidang Pertama',
+          status: 'scheduled' as const,
+          perkara: {
+            nomor_perkara: '123/Pdt.G/2024/PA.Pps',
+            para_pihak: 'Ahmad',
+            jenis_perkara_nama: 'Perdata Gugatan',
+          },
+        },
         existing_queue: null,
       },
     }
     vi.mocked(queueService.validatePerkara).mockResolvedValue(mockResponse)
 
     const onNext = vi.fn()
-    render(<StepValidate onNext={onNext} onExistingQueue={vi.fn()} onMultiPihak={vi.fn()} onError={vi.fn()} />)
+    render(<StepValidate onNext={onNext} onMultiPihak={vi.fn()} onError={vi.fn()} />)
 
     await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await userEvent.type(screen.getByLabelText(/nik/i), '3201234567890001')
@@ -90,7 +102,7 @@ describe('StepValidate', () => {
     vi.mocked(queueService.validatePerkara).mockResolvedValue(mockResponse)
 
     const onError = vi.fn()
-    render(<StepValidate onNext={vi.fn()} onExistingQueue={vi.fn()} onMultiPihak={vi.fn()} onError={onError} />)
+    render(<StepValidate onNext={vi.fn()} onMultiPihak={vi.fn()} onError={onError} />)
 
     await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await userEvent.type(screen.getByLabelText(/nik/i), '0000000000000000')
@@ -109,18 +121,31 @@ describe('StepValidate', () => {
         perkara_id: 123,
         pihak_nama: 'Ahmad',
         pihak_role: 'Penggugat',
-        jadwal: { tanggal: '2026-05-30', ruangan: 'Ruang 1' },
+        jadwal: {
+          id: 1,
+          perkara_id: 123,
+          ruangan: 'Ruang 1',
+          waktu: '2026-05-30T09:00:00',
+          jam_sidang: '09:00',
+          agenda: 'Sidang Pertama',
+          status: 'scheduled' as const,
+          perkara: {
+            nomor_perkara: '123/Pdt.G/2024/PA.Pps',
+            para_pihak: 'Ahmad',
+            jenis_perkara_nama: 'Perdata Gugatan',
+          },
+        },
         existing_queue: {
           queue_number: 'A-003',
           slot_time: '09:00',
-          status: 'waiting',
+          status: 'waiting' as const,
         },
       },
     }
     vi.mocked(queueService.validatePerkara).mockResolvedValue(mockResponse)
 
     const onMultiPihak = vi.fn()
-    render(<StepValidate onNext={vi.fn()} onExistingQueue={vi.fn()} onMultiPihak={onMultiPihak} onError={vi.fn()} />)
+    render(<StepValidate onNext={vi.fn()} onMultiPihak={onMultiPihak} onError={vi.fn()} />)
 
     await userEvent.type(screen.getByLabelText(/nomor perkara/i), '123/Pdt.G/2024/PA.Pps')
     await userEvent.type(screen.getByLabelText(/nik/i), '3201234567890001')

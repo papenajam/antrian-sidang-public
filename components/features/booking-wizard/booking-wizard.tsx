@@ -76,7 +76,7 @@ function mapValidationToBooking(data: NonNullable<ValidateResponse['data']>, pre
     nomorPerkara: data.jadwal.perkara?.nomor_perkara || prev.nomorPerkara,
     jenisPerkara: data.jadwal.perkara?.jenis_perkara_nama || prev.jenisPerkara,
     tanggal: data.jadwal.waktu,
-    ruangan: data.jadwal.ruangan,
+    ruangan: data.jadwal.ruangan || "",
   }
 }
 
@@ -123,7 +123,7 @@ export function BookingWizard() {
       setTicket({
         queue_number: data.existing_queue.queue_number,
         status: data.existing_queue.status,
-        slot_time: data.existing_queue.slot_time,
+        slot_time: data.existing_queue.slot_time || "",
         pihak_nama: data.pihak_nama,
         nomor_perkara: data.jadwal.perkara?.nomor_perkara || "",
         ruang_sidang: data.jadwal.ruangan,
@@ -258,7 +258,7 @@ export function BookingWizard() {
               ruangan={bookingData.ruangan}
               onNext={handleSlotNext}
               onBack={() => setCurrentStep(1)}
-              currentSlot={existingQueue?.slot_time}
+              currentSlot={existingQueue?.slot_time ?? undefined}
             />
           </BlurFade>
         )}

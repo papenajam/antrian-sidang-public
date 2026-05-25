@@ -23,16 +23,17 @@ export type QueueStatus =
 export interface JadwalSidang {
   id: number;
   perkara_id: number;
-  queue_number?: string | null; // Nomor antrian sidang — opsional, backend extension pending
-  ruangan: string;
+  queue_number?: string | null; // Nomor antrian sidang
+  ruangan: string | null; // Bisa null jika ruang sidang belum ditentukan
   waktu: string; // Tanggal dan waktu sidang (datetime string)
   jam_sidang: string | null;
   agenda: string;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'postponed';
   perkara?: {
-    nomor_perkara: string;
+    nomor_perkara: string | null;
     para_pihak: string | null;
-    jenis_perkara_nama: string;
-  };
+    jenis_perkara_nama: string | null;
+  } | null;
 }
 
 // App Settings types
@@ -116,7 +117,7 @@ export interface ValidateResponse {
 
 export interface ExistingQueue {
   queue_number: string;
-  slot_time: string;
+  slot_time: string | null; // Bisa null jika belum ada slot_time
   status: QueueStatus;
 }
 
