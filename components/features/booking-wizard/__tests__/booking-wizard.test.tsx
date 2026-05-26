@@ -88,7 +88,7 @@ describe('BookingWizard', () => {
     })
   })
 
-  it('shows ticket when multi-pihak with existing queue found', async () => {
+  it('shows existing queue card when existing queue found', async () => {
     const mockResponse = {
       valid: true,
       data: {
@@ -129,7 +129,7 @@ describe('BookingWizard', () => {
 
     await waitFor(() => {
       expect(screen.getByText('A-003')).toBeInTheDocument()
-      expect(screen.getByText(/booking berhasil/i)).toBeInTheDocument()
+      expect(screen.getByText(/perkara ini sudah memiliki booking/i)).toBeInTheDocument()
     })
   })
 })
