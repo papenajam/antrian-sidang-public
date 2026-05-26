@@ -4,7 +4,14 @@
  */
 
 const getBaseUrl = (): string => {
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  const url = process.env.NEXT_PUBLIC_API_URL;
+  if (!url) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('NEXT_PUBLIC_API_URL tidak disetel di environment production');
+    }
+    return 'http://localhost:8000/api';
+  }
+  return url;
 };
 
 interface ApiOptions extends RequestInit {
@@ -39,7 +46,10 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
       );
     }
 
-    return response.json();
+    if (response.status === 204) return null as T;
+
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;

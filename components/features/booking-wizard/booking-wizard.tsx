@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { FormProgress } from "@/components/features/form-progress"
 import { StepValidate } from "./step-validate"
@@ -18,6 +18,8 @@ interface BookingData {
   perkaraId: number
   nik: string
   namaPihak: string
+  namaPersonal?: string
+  teleponPersonal?: string
   nomorPerkara: string
   /** Jenis perkara dari data validasi SIPP */
   jenisPerkara: string
@@ -57,6 +59,8 @@ const INITIAL_BOOKING_DATA: BookingData = {
   perkaraId: 0,
   nik: "",
   namaPihak: "",
+  namaPersonal: "",
+  teleponPersonal: "",
   nomorPerkara: "",
   jenisPerkara: "",
   tanggal: "",
@@ -85,18 +89,28 @@ export function BookingWizard() {
   const [bookingData, setBookingData] = useState<BookingData>(INITIAL_BOOKING_DATA)
   const [ticket, setTicket] = useState<(QueueTicket & { slot_time: string }) | null>(null)
   const [existingQueue, setExistingQueue] = useState<ExistingQueue | null>(null)
-  // personalData dipakai oleh StepConfirm dan StepTicket (Task 4.5)
-  const [personalData, setPersonalData] = useState<{ nama: string; telepon: string } | null>(null)
-  const { setIsOpen } = useBookingModal()
+  const { isOpen, setIsOpen } = useBookingModal()
+
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentStep(1)
+      setBookingData(INITIAL_BOOKING_DATA)
+      setTicket(null)
+      setExistingQueue(null)
+    }
+  }, [isOpen])
 
   /**
    * Handler untuk menyimpan data personal dari StepValidate.
-   * NIK juga dipropagasi ke bookingData supaya StepConfirm dan StepTicket
-   * bisa menampilkan NIK yang diisi user (sebelumnya selalu kosong — bug).
+   * Semua data dipropagasi ke bookingData sebagai single source of truth.
    */
   const handlePersonalData = (info: { nik: string; nama: string; telepon: string }) => {
-    setPersonalData({ nama: info.nama, telepon: info.telepon })
-    setBookingData((prev) => ({ ...prev, nik: info.nik }))
+    setBookingData((prev) => ({
+      ...prev,
+      nik: info.nik,
+      namaPersonal: info.nama,
+      teleponPersonal: info.telepon
+    }))
   }
 
   /**
@@ -116,22 +130,11 @@ export function BookingWizard() {
    */
   const handleMultiPihak = (data: NonNullable<ValidateResponse['data']>) => {
     // Multi-pihak: perkara sudah booking oleh pihak lain
-    // Langsung berikan nomor antrian yang sama (skip langkah 2-3)
     setBookingData((prev) => mapValidationToBooking(data, prev))
 
     if (data.existing_queue) {
-      setTicket({
-        queue_number: data.existing_queue.queue_number,
-        status: data.existing_queue.status,
-        slot_time: data.existing_queue.slot_time || "",
-        pihak_nama: data.pihak_nama,
-        nomor_perkara: data.jadwal.perkara?.nomor_perkara || "",
-        ruang_sidang: data.jadwal.ruangan,
-      })
-      setCurrentStep(4)
-      toast.info("Perkara ini sudah memiliki booking", {
-        description: `Anda mendapatkan nomor antrian yang sama: ${data.existing_queue.queue_number}`,
-      })
+      setExistingQueue(data.existing_queue)
+      setCurrentStep('existing-queue')
     } else {
       setCurrentStep(2)
     }
@@ -190,7 +193,6 @@ export function BookingWizard() {
     setBookingData(INITIAL_BOOKING_DATA)
     setTicket(null)
     setExistingQueue(null)
-    setPersonalData(null)
     // Close modal agar user bisa buka lagi via FAB atau HeroSection
     setIsOpen(false)
   }
@@ -271,8 +273,8 @@ export function BookingWizard() {
               namaPihak={bookingData.namaPihak}
               nomorPerkara={bookingData.nomorPerkara}
               jenisPerkara={bookingData.jenisPerkara}
-              nama={personalData?.nama}
-              telepon={personalData?.telepon}
+              nama={bookingData.namaPersonal}
+              telepon={bookingData.teleponPersonal}
               tanggal={bookingData.tanggal}
               slot={bookingData.selectedSlot}
               ruangan={bookingData.ruangan}
@@ -288,9 +290,9 @@ export function BookingWizard() {
             <StepTicket
               ticket={{
                 ...ticket,
-                tanggal: bookingData.tanggal ? bookingData.tanggal.split("T")[0] : undefined,
+                tanggal: bookingData.tanggal,
               }}
-              telepon={personalData?.telepon}
+              telepon={bookingData.teleponPersonal}
               onCheckStatus={handleCheckStatus}
               onBookAgain={handleBookAgain}
             />
