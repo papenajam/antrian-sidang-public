@@ -1,0 +1,30 @@
+{
+  "name": "Antrian Sidang — Pengadilan Agama Penajam",
+  "short_name": "Antrian Sidang",
+  "description": "Daftar antrian sidang, pantau giliran real-time, kelola jadwal — Pengadilan Agama Penajam Paser Utara.",
+  "lang": "id",
+  "start_url": "/mobile.html?bare=1",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbfaf6",
+  "theme_color": "#0f5f2e",
+  "categories": ["government", "productivity"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Daftar Antrian",
+      "short_name": "Daftar",
+      "url": "/mobile.html?bare=1&action=daftar",
+      "description": "Mulai pendaftaran antrian sidang"
+    },
+    {
+      "name": "Tiket Saya",
+      "short_name": "Tiket",
+      "url": "/mobile.html?bare=1&tab=ticket"
+    }
+  ]
+}
